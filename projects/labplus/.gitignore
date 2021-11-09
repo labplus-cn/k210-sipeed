@@ -1,0 +1,5 @@
+build/*
+# !build/maixpy.bin
+.config.mk
+.flash.conf.json
+*.kfpkg

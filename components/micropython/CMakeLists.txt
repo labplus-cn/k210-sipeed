@@ -81,6 +81,7 @@ if(CONFIG_COMPONENT_MICROPYTHON_ENABLE)
     append_srcs_dir(MPY_PORT_SRCS "port/src/standard_lib/socket")
     append_srcs_dir(MPY_PORT_SRCS "port/src/standard_lib/uos")
     append_srcs_dir(MPY_PORT_SRCS "port/src/standard_lib/utime")
+    append_srcs_dir(MPY_PORT_SRCS "port/src/flash")
 
     list(APPEND MPY_SRCS    
                     "core/py/mpstate.c"

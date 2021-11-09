@@ -1,0 +1,27 @@
+{
+    "name": "laplus_owl",
+    "application": "labplus.bin",    
+    "filesystem": {
+        "addr": "0xD00000",
+        "indir": "release/filesystem/owl",
+        "image": "fs.img"
+    },
+    "extras": [
+        {
+            "addr": "0x400000",
+            "bin": "release/Noto_Sans_CJK_SC_Light16.bin"
+        },
+        {
+            "addr": "0x300000",
+            "bin": "release/models/facedetect.kmodel"
+        },
+        {
+            "addr": "0x600000",
+            "bin": "release/models/mnist.kmodel"
+        },
+        {
+            "addr": "0x640000",
+            "bin": "release/models/20class.kmodel"
+        }
+    ]
+}
