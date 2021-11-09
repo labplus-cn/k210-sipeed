@@ -1,19 +1,12 @@
 import time
 from Maix import GPIO, I2S
 from fpioa_manager import fm
-
-sample_rate   = 16000
-
-fm.register(20,fm.fpioa.I2S0_IN_D0, force=True)
-fm.register(18,fm.fpioa.I2S0_SCLK, force=True)
-fm.register(19,fm.fpioa.I2S0_WS, force=True)
-
-rx = I2S(I2S.DEVICE_0)
-rx.channel_config(rx.CHANNEL_0, rx.RECEIVER, align_mode=I2S.STANDARD_MODE)
-rx.set_sample_rate(sample_rate)
+# user setting
 
 from speech_recognizer import asr
 from machine import Timer
+
+sample_rate   = 16000
 
 def on_timer_asr(timer):
   timer.callback_arg().state()
@@ -46,11 +39,19 @@ class maix_asr(asr):
       return sets
     return None
 
-class  Asr(object):
-  def __init__(self):
+class  speech_recognize(object):
+
+  def __init__(self, model_addr=0x650000):
+    self.model_addr=model_addr
     self.sets_key_id = {}
     self.sets_key_threshold = {}
-    self.t = maix_asr(0x500000, I2S.DEVICE_0, 3, shift=1) # maix bit set shift=1
+    fm.register(20,fm.fpioa.I2S0_IN_D0, force=True)
+    fm.register(18,fm.fpioa.I2S0_SCLK, force=True)
+    fm.register(19,fm.fpioa.I2S0_WS, force=True)
+    rx = I2S(I2S.DEVICE_0)
+    rx.channel_config(rx.CHANNEL_0, rx.RECEIVER, align_mode=I2S.STANDARD_MODE)
+    rx.set_sample_rate(sample_rate)
+    self.t = maix_asr(self.model_addr, I2S.DEVICE_0, 3, shift=1) # maix bit set shift=1
     self.tim = Timer(Timer.TIMER1, Timer.CHANNEL3, mode=Timer.MODE_PERIODIC, period=64, callback=on_timer_asr, arg=self.t)
     self.tim.start()
 
@@ -61,20 +62,13 @@ class  Asr(object):
     self.t.config(self.sets_key_threshold)
 
   def recognize(self):
-    id = None
-    try:
-      tmp = self.t.recognize()
-    except Exception as e:
-      id = None
-    else:
-      if isinstance(tmp, dict):
-        # print(tmp)
-        for key in tmp:
-          if key in self.sets_key_id:
-            id = self.sets_key_id[key]
-    finally:
-      return id
-    
+    tmp = self.t.recognize()
+    if isinstance(tmp, dict):
+      # print(tmp)
+      for key in tmp:
+        if key in self.sets_key_id:
+          id = self.sets_key_id[key]
+      return id 
 
   def asr_release(self):
     self.tim.stop()

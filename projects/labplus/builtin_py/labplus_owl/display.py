@@ -36,7 +36,7 @@ class Font(object):
         return buffer
 
 # 加载字体
-font_noto_sans = Font(font_address=0x400000)
+font_noto_sans = Font(font_address=0xa50000)
 
 def Draw_CJK_String(s, x, y, img, color=(255, 255, 255), font=font_noto_sans):
     """Draw_CJK_String 在img上显示unicode字符串,支持CJK字符集

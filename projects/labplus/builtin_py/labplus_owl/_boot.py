@@ -34,7 +34,7 @@ if ide:
     repl.init(1500000, 8, None, 1, read_buf_len=2048, ide=True, from_ide=False)
     sys.exit()
 
-debug_mode = "/flash/debug.conf"
+debug_mode = "/sd/debug.conf"
 is_debug = True
 try:
     f = open(debug_mode)
@@ -47,11 +47,11 @@ except Exception:
 from labplus import *
 from fpioa_manager import fm
 
-# if not is_debug:
-#     repl = UART.repl_uart()
-#     repl.init(2000000, 8, None, 1, read_buf_len=2048)
-#     fm.fpioa.set_function(33, FPIOA.UARTHS_RX)
-#     fm.fpioa.set_function(32, FPIOA.UARTHS_TX)
+if not is_debug:
+    repl = UART.repl_uart()
+    repl.init(2000000, 8, None, 1, read_buf_len=2048)
+    fm.fpioa.set_function(33, FPIOA.UARTHS_RX)
+    fm.fpioa.set_function(32, FPIOA.UARTHS_TX)
 
     # print('hello, world')
     # fm.register(11, fm.fpioa.UART2_TX)
@@ -59,5 +59,3 @@ from fpioa_manager import fm
     # uart = machine.UART(machine.UART.UART2)
     # uart.init(115200, 8, None, 1, timeout=100, read_buf_len=2048)
     # machine.UART.set_repl_uart(uart)
-
-
