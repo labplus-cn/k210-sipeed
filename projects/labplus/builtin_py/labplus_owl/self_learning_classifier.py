@@ -23,7 +23,7 @@ class Self_learning_classifier(object):
     fm.register(16, fm.fpioa.GPIOHS0+16)
     self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
     #B键
-    fm.register(16, fm.fpioa.GPIOHS0+17)
+    fm.register(17, fm.fpioa.GPIOHS0+17)
     self.key_b = GPIO(GPIO.GPIOHS0+17, GPIO.PULL_UP)
 
     gc.collect()
