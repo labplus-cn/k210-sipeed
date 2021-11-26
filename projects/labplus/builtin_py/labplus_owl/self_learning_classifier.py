@@ -19,9 +19,12 @@ class Self_learning_classifier(object):
     # sensor.set_vflip(1)
     # sensor.set_hmirror(1)
     sensor.set_windowing((224, 224))
-
+    #A键
     fm.register(16, fm.fpioa.GPIOHS0+16)
     self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
+    #B键
+    fm.register(16, fm.fpioa.GPIOHS0+17)
+    self.key_b = GPIO(GPIO.GPIOHS0+17, GPIO.PULL_UP)
 
     gc.collect()
     self.model = kpu.load(self.model_addr)
@@ -31,13 +34,14 @@ class Self_learning_classifier(object):
   def add_class_img(self):
     while True:
       img = sensor.snapshot()
+      img = img.draw_string(0, 0, "add class image", color=(0,255,0),scale=2)
       if self.key.value() == 0:
           time.sleep_ms(30)
           if self.key.value() == 0:
             index = self.classifier.add_class_img(img)
             print("add class img:", index)
             img = img.draw_string(0, 0, "add class:{0}".format(index), color=(0,255,0),scale=1)
-            time.sleep_ms(500)
+            time.sleep_ms(3000)
             if index >= self.class_num-1:
               print("Add class img successed.")
               del img
@@ -48,13 +52,14 @@ class Self_learning_classifier(object):
   def add_sample_img(self):
     while True:
       img = sensor.snapshot()
-      if self.key.value() == 0:
+      img = img.draw_string(0, 0, "add image sample image", color=(0,255,0),scale=2)
+      if self.key_b.value() == 0:
           time.sleep_ms(30)
-          if self.key.value() == 0:
+          if self.key_b.value() == 0:
             index = self.classifier.add_sample_img(img)
             print("add sample img:", index)
             img = img.draw_string(0, 0, "add image sample:{0}".format(index), color=(0,255,0),scale=1)
-            time.sleep_ms(500)
+            time.sleep_ms(3000)
             if index >= self.sample_num-1:
               print("Add sample img successed.")
               del img
@@ -93,5 +98,5 @@ class Self_learning_classifier(object):
     except:
       print("del model fail")
     gc.collect()
-    self.classifier, self.class_num, self.sample_num = kpu.classifier.load(slc.model, name)
+    self.classifier, self.class_num, self.sample_num = kpu.classifier.load(self.slc.model, name)
     print(self.class_num)

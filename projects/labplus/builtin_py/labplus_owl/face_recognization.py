@@ -17,7 +17,7 @@ from fpioa_manager import fm
 
 #     key_gpio.irq(set_key_state, GPIO.IRQ_RISING, GPIO.WAKEUP_NOT_SUPPORT)
 
-print("mem free:", gc.mem_free())
+# print("mem free:", gc.mem_free())
 
 class Face_recognization(object):
     def __init__(self, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, face_num=1, accuracy=85):
@@ -91,7 +91,7 @@ class Face_recognization(object):
                             self.record_ftrs.append(self.record_ftr)
                             print("add a face.")
                             img.draw_string(0,0, "Add a face, index={0}".format(tmp_num), color=(0, 255, 0), scale=1)
-                            time.sleep(1)
+                            time.sleep(3)
                             tmp_num = tmp_num + 1
                             if tmp_num >= self.face_num:
                                 return
