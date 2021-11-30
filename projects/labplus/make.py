@@ -26,7 +26,7 @@ print("-- SDK_PATH:{}".format(sdk_path))
 
 def main():
     parser = argparse.ArgumentParser("make labplus K210 projects")
-    parser.add_argument('--board','-b', choices=['1956', 'owl', 'classroom_kit'], help='选择合适的板子',required=True)
+    parser.add_argument('--board','-b', choices=['1956', 'owl', 'classroom_kit'], help='选择合适的板子, python3 make.py -b owl build', required=True)
 
     subparsers = parser.add_subparsers(dest='subcommand',help='select the task')
 

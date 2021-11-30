@@ -16,7 +16,7 @@ rgb_led = ws2812(34,2)
 # LCD
 lcd.init(freq=15000000, invert=1)
 try:
-    background = image.Image('/flash/startup_dark.jpg', copy_to_fb=True)
+    background = image.Image('/flash/startup.jpg', copy_to_fb=True)
     lcd.display(background)
     del background
 except:

@@ -2,9 +2,11 @@ import time
 from Maix import GPIO, I2S
 from fpioa_manager import fm
 # user setting
-
+from display import Draw_CJK_String
 from speech_recognizer import asr
 from machine import Timer
+import lcd
+import image
 
 sample_rate   = 16000
 
@@ -40,7 +42,6 @@ class maix_asr(asr):
     return None
 
 class  speech_recognize(object):
-
   def __init__(self, model_addr=0x650000):
     self.model_addr=model_addr
     self.sets_key_id = {}
@@ -54,7 +55,9 @@ class  speech_recognize(object):
     self.t = maix_asr(self.model_addr, I2S.DEVICE_0, 3, shift=1) # maix bit set shift=1
     self.tim = Timer(Timer.TIMER1, Timer.CHANNEL3, mode=Timer.MODE_PERIODIC, period=64, callback=on_timer_asr, arg=self.t)
     self.tim.start()
-
+    self.lcd = lcd
+    self.image = image.Image()
+    
   def config(self, sets):
     for key in sets:
       self.sets_key_threshold[key] = sets[key][0]
@@ -62,6 +65,8 @@ class  speech_recognize(object):
     self.t.config(self.sets_key_threshold)
 
   def recognize(self):
+    Draw_CJK_String('语音识别中...', 120, 120, self.image, color=(0, 255, 0))
+    self.lcd.display(self.image)
     tmp = self.t.recognize()
     if isinstance(tmp, dict):
       # print(tmp)

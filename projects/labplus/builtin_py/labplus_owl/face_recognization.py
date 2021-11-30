@@ -6,18 +6,7 @@ import time
 from Maix import FPIOA, GPIO
 import gc
 from fpioa_manager import fm
-# import utime
-
-# BOUNCE_PROTECTION = 50
-
-# def set_key_state(*_):
-#     global start_processing
-#     start_processing = True
-#     utime.sleep_ms(BOUNCE_PROTECTION)
-
-#     key_gpio.irq(set_key_state, GPIO.IRQ_RISING, GPIO.WAKEUP_NOT_SUPPORT)
-
-# print("mem free:", gc.mem_free())
+from display import Draw_CJK_String
 
 class Face_recognization(object):
     def __init__(self, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, face_num=1, accuracy=85):
@@ -32,8 +21,8 @@ class Face_recognization(object):
                     (81, 105)]  # standard face key point position        
         self.accuracy = accuracy
 
-        self.names = ['Mr.1', 'Mr.2', 'Mr.3', 'Mr.4', 'Mr.5',
-                'Mr.6', 'Mr.7', 'Mr.8', 'Mr.9', 'Mr.10']
+        self.names = ['ID:0', 'ID:1', 'ID:2', 'ID:3', 'ID:4',
+                'ID:5', 'ID:6', 'ID:7', 'ID:8', 'ID:9']
 
         fm.register(16, fm.fpioa.GPIOHS0+16)
         self.key = GPIO(GPIO.GPIOHS0+16, GPIO.IN)
@@ -50,6 +39,7 @@ class Face_recognization(object):
             img = sensor.snapshot()
             self.clock.tick()
             code = kpu.run_yolo2(self.task_fd, img)
+            Draw_CJK_String('按A键添加人脸数据', 5, 5, img, color=(0, 255, 0))
             if code:
                 for i in code:
                     gc.collect()
@@ -89,20 +79,21 @@ class Face_recognization(object):
                         if self.key.value() == 0:
                             self.record_ftr = feature
                             self.record_ftrs.append(self.record_ftr)
-                            print("add a face.")
-                            img.draw_string(0,0, "Add a face, index={0}".format(tmp_num), color=(0, 255, 0), scale=1)
+                            # print("add a face.")
+                            # a = img.draw_string(5,15, "Add a face, id={0}".format(tmp_num), color=(0, 255, 0), scale=1)
+                            Draw_CJK_String('添加人脸数据, id={0}'.format(tmp_num), 5, 20, img, color=(0, 255, 0))
+                            lcd.display(img)
                             time.sleep(3)
                             tmp_num = tmp_num + 1
                             if tmp_num >= self.face_num:
                                 return
                     break 
-                # fps = self.clock.fps()
-                # print("%2.1f fps" % fps)
-                a = lcd.display(img)
-                gc.collect()     
+            a = lcd.display(img)
+            gc.collect()     
             
     def face_recognize(self):
         img = sensor.snapshot()
+        Draw_CJK_String('识别中...', 5, 5, img, color=(0, 255, 0))
         self.clock.tick()
         code = kpu.run_yolo2(self.task_fd, img)
         res =  None
@@ -160,10 +151,10 @@ class Face_recognization(object):
                 break 
             # fps = self.clock.fps()
             # print("%2.1f fps" % fps)
-            a = lcd.display(img)
-            gc.collect()    
-            return res # 如果图片跟人脸库中对应人脸相似度大于阈值，返回对应人脸索引号，否则返回None
-        
+        a = lcd.display(img)
+        gc.collect()    
+        return res # 如果图片跟人脸库中对应人脸相似度大于阈值，返回对应人脸索引号，否则返回None
+    
     def __del__(self):
         a = kpu.deinit(self.task_fe)
         a = kpu.deinit(self.task_ld)

@@ -25,7 +25,7 @@ lcd.rotation(2)
 # lcd.direction(0x20) # 交换lcd, width/height; (320,240)=>(240,320)
 # lcd.write_reg(0x36, 0x48)   # 设置lcd方向和颜色
 try:
-    background = image.Image('/flash/startup_dark.jpg', copy_to_fb=True)
+    background = image.Image('/flash/startup.jpg', copy_to_fb=True)
     lcd.display(background)
     del background
 except:
