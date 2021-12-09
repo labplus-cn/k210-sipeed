@@ -57,7 +57,7 @@ class Self_learning_classifier(object):
           time.sleep_ms(30)
           if self.key_b.value() == 0:
             index = self.classifier.add_sample_img(img)
-            print("add sample img:", index)
+            # print("add sample img:", index)
             # img = img.draw_string(0, 0, "add image sample:{0}".format(index), color=(0,255,0),scale=1)
             Draw_CJK_String('添加训练集图片{0}'.format(index+1), 5, 20, img, color=(0, 0, 200))
             lcd.display(img)
