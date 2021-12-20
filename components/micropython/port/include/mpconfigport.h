@@ -248,7 +248,7 @@ extern const struct _mp_print_t mp_debug_print;
 
 #define MICROPY_PY_WEBSOCKET                (1)
 #define MICROPY_PY_WEBREPL                  (1)
-#define MICROPY_PY_FRAMEBUF                 (0)
+#define MICROPY_PY_FRAMEBUF                 (1)
 #define MICROPY_PY_USOCKET_EVENTS           (MICROPY_PY_WEBREPL)
 #define MICROPY_PY_NETWORK                  (1)
 #define MICROPY_PY_USOCKET                  (1)
