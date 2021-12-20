@@ -62,6 +62,8 @@ def build(args):
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl.mk']
     if args.board == 'classroom_kit':
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_classroom_kit.mk']
+    if args.board == 'amigo':
+        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_amigo.mk']
     os.environ['BOARD_NAME'] = args.board
 
     sdk_env_name = "MY_SDK_PATH"
@@ -80,7 +82,7 @@ def mkfs(args):
 
     os.chdir(sys.path[0])
     # 2. construct the file system image
-    cmd = 'python3 ' + os.path.join(sdk_path, 'tools/spiffs/mkspiffs.py') + \
+    cmd = 'python3 ' + os.path.join(sdk_path, 'tools/spiffs/gen_spiffs_image.py') + \
         ' pack -d ' + indir + \
         ' -o ' + os.path.join(build_dir, image)
     os.system(cmd)
@@ -116,7 +118,7 @@ def flash(args):
         exit(2)
     dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0004)   # set CP2104.GPIO2 = 0
 
-    cmd = 'kflash' + ' -p /dev/ttyUSB0 -b 2000000 -B bit' + ' build/labplus.bin'
+    cmd = 'kflash' + ' -p /dev/ttyUSB0 -b 2000000' + ' build/labplus.bin'
     os.system(cmd)
     
     dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0404)   # set CP2104.GPIO2 = 1
