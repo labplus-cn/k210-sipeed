@@ -26,7 +26,7 @@ print("-- SDK_PATH:{}".format(sdk_path))
 
 def main():
     parser = argparse.ArgumentParser("make labplus K210 projects")
-    parser.add_argument('--board','-b', choices=['1956', 'owl', 'classroom_kit', 'amigo'], help='选择合适的板子, python3 make.py -b owl build', required=True)
+    parser.add_argument('--board','-b', choices=['1956', 'owl', 'classroom_kit', 'owl_dog'], help='选择合适的板子, python3 make.py -b owl build', required=True)
 
     subparsers = parser.add_subparsers(dest='subcommand',help='select the task')
 
@@ -60,6 +60,8 @@ def build(args):
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_1956.mk']
     if args.board == 'owl':
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl.mk']
+    if args.board == 'owl_dog':
+        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_dog.mk']
     if args.board == 'classroom_kit':
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_classroom_kit.mk']
     if args.board == 'amigo':

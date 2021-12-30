@@ -1,7 +1,7 @@
-import sensor
+# import sensor
 import image
-import lcd
-import KPU as kpu
+# import lcd
+# import KPU as kpu
 import time
 from Maix import FPIOA, GPIO
 import gc
@@ -9,10 +9,15 @@ from fpioa_manager import fm
 from display import Draw_CJK_String
 
 class Face_recognization(object):
-    def __init__(self, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, face_num=1, accuracy=80):
-        self.task_fd = kpu.load(task_fd)
-        self.task_ld = kpu.load(task_ld)
-        self.task_fe = kpu.load(task_fe)
+    def __init__(self, kpu, lcd, sensor, choice=1, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, 
+                 face_num=3, accuracy=80, 
+                 names = ['ID:0', 'ID:1', 'ID:2', 'ID:3', 'ID:4', 'ID:5', 'ID:6', 'ID:7', 'ID:8', 'ID:9']):
+        self.kpu = kpu
+        self.lcd = lcd
+        self.sensor = sensor
+        self.task_fd = self.kpu.load(task_fd)
+        self.task_ld = self.kpu.load(task_ld)
+        self.task_fe = self.kpu.load(task_fe)
         self.face_num = face_num
         self.clock = time.clock()
         self.anchor = (1.889, 2.5245, 2.9465, 3.94056, 3.99987, 5.3658, 5.155437,
@@ -21,25 +26,26 @@ class Face_recognization(object):
                     (81, 105)]  # standard face key point position        
         self.accuracy = accuracy
 
-        self.names = ['ID:0', 'ID:1', 'ID:2', 'ID:3', 'ID:4',
-                'ID:5', 'ID:6', 'ID:7', 'ID:8', 'ID:9']
+        self.names = names
 
         fm.register(16, fm.fpioa.GPIOHS0+16)
         # self.key = GPIO(GPIO.GPIOHS0+16, GPIO.IN) #GPIO.PULL_UP
         self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
 
-        a = kpu.init_yolo2(self.task_fd, 0.5, 0.3, 5, self.anchor)
+        a = self.kpu.init_yolo2(self.task_fd, 0.5, 0.3, 5, self.anchor)
         self.img_face = image.Image(size=(128, 128))
         a = self.img_face.pix_to_ai()
         self.record_ftr = []
         self.record_ftrs = []
+        self.change_camera(choice=choice)
+        time.sleep(3)
 
     def add_face(self):
         tmp_num = 0
         while True:
-            img = sensor.snapshot()
+            img = self.sensor.snapshot()
             self.clock.tick()
-            code = kpu.run_yolo2(self.task_fd, img)
+            code = self.kpu.run_yolo2(self.task_fd, img)
             Draw_CJK_String('按A键添加人脸数据', 5, 5, img, color=(0, 255, 0))
             if code:
                 for i in code:
@@ -51,7 +57,7 @@ class Face_recognization(object):
                     a = face_cut_128.pix_to_ai()
                     # a = img.draw_image(face_cut_128, (0,0))
                     # 2、Landmark for face 5 points
-                    fmap = kpu.forward(self.task_ld, face_cut_128)
+                    fmap = self.kpu.forward(self.task_ld, face_cut_128)
                     plist = fmap[:]
                     le = (i.x() + int(plist[0] * i.w() - 10), i.y() + int(plist[1] * i.h()))
                     re = (i.x() + int(plist[2] * i.w()), i.y() + int(plist[3] * i.h()))
@@ -72,8 +78,8 @@ class Face_recognization(object):
                     # a = img.draw_image(img_face, (128,0))
                     del (face_cut_128)
                     # 4、calculate face feature vector
-                    fmap = kpu.forward(self.task_fe, self.img_face)
-                    feature = kpu.face_encode(fmap[:])
+                    fmap = self.kpu.forward(self.task_fe, self.img_face)
+                    feature = self.kpu.face_encode(fmap[:])
                     # 5、人脸数据存入库中
                     if self.key.value() == 0:
                         time.sleep_ms(30)
@@ -83,20 +89,20 @@ class Face_recognization(object):
                             # print("add a face.")
                             # a = img.draw_string(5,15, "Add a face, id={0}".format(tmp_num), color=(0, 255, 0), scale=1)
                             Draw_CJK_String('添加人脸数据, id={0}'.format(tmp_num), 5, 20, img, color=(0, 255, 0))
-                            lcd.display(img)
+                            self.lcd.display(img)
                             time.sleep(3)
                             tmp_num = tmp_num + 1
                             if tmp_num >= self.face_num:
                                 return
                     break 
-            a = lcd.display(img)
+            a = self.lcd.display(img)
             gc.collect()     
             
     def face_recognize(self):
-        img = sensor.snapshot()
+        img = self.sensor.snapshot()
         Draw_CJK_String('识别中...', 5, 5, img, color=(0, 255, 0))
         self.clock.tick()
-        code = kpu.run_yolo2(self.task_fd, img)
+        code = self.kpu.run_yolo2(self.task_fd, img)
         res =  None
         max_score = 0
         if code:
@@ -109,7 +115,7 @@ class Face_recognization(object):
                 a = face_cut_128.pix_to_ai()
                 # a = img.draw_image(face_cut_128, (0,0))
                 # 2、Landmark for face 5 points
-                fmap = kpu.forward(self.task_ld, face_cut_128)
+                fmap = self.kpu.forward(self.task_ld, face_cut_128)
                 plist = fmap[:]
                 le = (i.x() + int(plist[0] * i.w() - 10), i.y() + int(plist[1] * i.h()))
                 re = (i.x() + int(plist[2] * i.w()), i.y() + int(plist[3] * i.h()))
@@ -130,12 +136,12 @@ class Face_recognization(object):
                 # a = img.draw_image(img_face, (128,0))
                 del (face_cut_128)
                 # 4、calculate face feature vector
-                fmap = kpu.forward(self.task_fe, self.img_face)
-                feature = kpu.face_encode(fmap[:])
+                fmap = self.kpu.forward(self.task_fe, self.img_face)
+                feature = self.kpu.face_encode(fmap[:])
                 scores = []
                 # 5、compare feature with store face feature.
                 for j in range(len(self.record_ftrs)): 
-                    score = kpu.face_compare(self.record_ftrs[j], feature)
+                    score = self.kpu.face_compare(self.record_ftrs[j], feature)
                     scores.append(score) # 跟录入的人脸库中的每一张人脸比较，相似度值存入scores[]
                 max_score = 0
                 index = 0
@@ -153,14 +159,29 @@ class Face_recognization(object):
                 break 
             # fps = self.clock.fps()
             # print("%2.1f fps" % fps)
-        a = lcd.display(img)
+        a = self.lcd.display(img)
         gc.collect()    
         return res,max_score # 如果图片跟人脸库中对应人脸相似度大于阈值，返回对应人脸索引号，否则返回None
     
+    def change_camera(self, choice):
+        try:
+            self.sensor.reset(choice=choice)  
+        except Exception as e:
+            self.lcd.clear((0, 0, 255))
+            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
+        self.sensor.set_framesize(self.sensor.QVGA)
+        self.sensor.set_pixformat(self.sensor.RGB565)
+        if(choice==1):
+            self.sensor.set_vflip(1)
+        else:
+            self.sensor.set_vflip(0)
+        self.sensor.set_hmirror(1)
+        self.sensor.run(1)
+    
     def __del__(self):
-        a = kpu.deinit(self.task_fe)
-        a = kpu.deinit(self.task_ld)
-        a = kpu.deinit(self.task_fd)
+        a = self.kpu.deinit(self.task_fe)
+        a = self.kpu.deinit(self.task_ld)
+        a = self.kpu.deinit(self.task_fd)
 
 # """
 # 测试代码

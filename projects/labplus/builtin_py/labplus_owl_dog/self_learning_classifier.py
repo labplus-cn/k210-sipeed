@@ -8,11 +8,15 @@ import gc
 from display import Draw_CJK_String
 
 class Self_learning_classifier(object):
-  def __init__(self, model_addr=0x850000, class_num=1, sample_num=15, threshold=11):
+  def __init__(self, sensor, choice=1, model_addr=0x850000, class_num=1, sample_num=15, threshold=11, class_names=["class.1", "class.2", "class.3"]):
     self.model_addr = model_addr
     self.class_num = class_num
     self.sample_num = sample_num
     self.threshold = threshold
+    self.class_names = class_names
+    self.sensor = sensor
+    self.kpu = kpu
+    self.lcd = lcd
     gc.collect()
 
     #A键
@@ -26,10 +30,13 @@ class Self_learning_classifier(object):
     self.model = kpu.load(self.model_addr)
     self.classifier = kpu.classifier(self.model, self.class_num, self.sample_num)
 
+    self.change_camera(choice=choice)
+    time.sleep(3)
+
   # snapshot every class
   def add_class_img(self):
     while True:
-      img = sensor.snapshot()
+      img = self.sensor.snapshot()
       # img = img.draw_string(0, 0, "add class image", color=(0,255,0),scale=2)
       Draw_CJK_String('按A键按顺序添加分类图片', 5, 5, img, color=(0, 255, 0))
       if self.key.value() == 0:
@@ -50,7 +57,7 @@ class Self_learning_classifier(object):
   # capture img
   def add_sample_img(self):
     while True:
-      img = sensor.snapshot()
+      img = self.sensor.snapshot()
       # img = img.draw_string(0, 0, "add image sample image", color=(0,255,0),scale=2)
       Draw_CJK_String('按B键添加训练集图片', 5, 5, img, color=(0, 0, 200))
       if self.key_b.value() == 0:
@@ -74,7 +81,7 @@ class Self_learning_classifier(object):
     self.classifier.train()
 
   def predict(self):
-    img = sensor.snapshot()
+    img = self.sensor.snapshot()
     Draw_CJK_String('识别中...', 5, 5, img, color=(0, 255, 0))
     res_index = None
     try:
@@ -104,3 +111,18 @@ class Self_learning_classifier(object):
     gc.collect()
     self.classifier, self.class_num, self.sample_num = kpu.classifier.load(self.model, name)
     # print(self.class_num)
+  
+  def change_camera(self, choice):
+        try:
+            self.sensor.reset(choice=choice)  
+        except Exception as e:
+            self.lcd.clear((0, 0, 255))
+            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
+        self.sensor.set_framesize(self.sensor.QVGA)
+        self.sensor.set_pixformat(self.sensor.RGB565)
+        if(choice==1):
+            self.sensor.set_vflip(1)
+        else:
+            self.sensor.set_vflip(0)
+        self.sensor.set_hmirror(1)
+        self.sensor.run(1)
