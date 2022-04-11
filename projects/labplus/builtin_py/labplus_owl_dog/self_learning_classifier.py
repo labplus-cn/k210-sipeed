@@ -27,8 +27,8 @@ class Self_learning_classifier(object):
     self.key_b = GPIO(GPIO.GPIOHS0+17, GPIO.PULL_UP)
 
     gc.collect()
-    self.model = kpu.load(self.model_addr)
-    self.classifier = kpu.classifier(self.model, self.class_num, self.sample_num)
+    self.model = self.kpu.load(self.model_addr)
+    self.classifier = self.kpu.classifier(self.model, self.class_num, self.sample_num)
 
     self.change_camera(choice=choice)
     time.sleep(3)

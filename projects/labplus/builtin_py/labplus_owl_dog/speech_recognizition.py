@@ -66,8 +66,8 @@ class  speech_recognize(object):
     self.t.config(self.sets_key_threshold)
 
   def recognize(self):
-    Draw_CJK_String('语音识别中...', 120, 120, self.image, color=(0, 255, 0))
-    self.lcd.display(self.image)
+    # Draw_CJK_String('语音识别中...', 120, 120, self.image, color=(0, 255, 0))
+    # self.lcd.display(self.image)
     tmp = self.t.recognize()
     if isinstance(tmp, dict):
       # print(tmp)

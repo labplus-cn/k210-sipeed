@@ -8,12 +8,12 @@ from speech_recognizition import speech_recognize
 from face_recognization import Face_recognization
 from self_learning_classifier import Self_learning_classifier
 from qrcode import QRCode_recognization
+from color import color_recognization
 from modules import ws2812
 import time
 from fpioa_manager import fm
 from machine import UART
 from xgo import XGO
-
 class Button():
     def __init__(self):
         fm.register(16, fm.fpioa.GPIOHS16, force=True)
@@ -106,6 +106,19 @@ class AI_Camera_GO(object):
             
         except:
             raise('init error')
+    
+    def DispChar(self, s, x, y, img, color):
+        Draw_CJK_String(s,x,y,img,color)
+
+    def show_expression(self, num):
+        try:
+            background = image.Image('/flash/dog/dog{}.jpg'.format(num), copy_to_fb=True)
+            self.lcd.display(background)
+            del background
+        except:
+            background = image.Image('/flash/startup.jpg', copy_to_fb=True)
+            self.lcd.display(background)
+            del background 
 
     def rgb_display(self, num, color):
         self.rgb_led.set_led(num, color)
@@ -124,6 +137,9 @@ class AI_Camera_GO(object):
         del self.image
     
     def change_camera(self, choice):
+        '''
+            切换摄像头
+        '''
         try:
             self.sensor.reset(choice=choice)  
         except Exception as e:
@@ -152,6 +168,9 @@ class AI_Camera_GO(object):
         self.slc = Self_learning_classifier(sensor=self.sensor, choice=choice, class_num=class_num, sample_num=sample_num, class_names=class_names)
 
     def qrcode_recognization_init(self, choice=1):
-        self.qrcode  = QRCode_recognization(lcd=self.lcd, sensor=self.sensor, choice=choice)
+        self.qrcode  = QRCode_recognization(choice=choice)
+
+    def color_recognization_init(self, choice=1):
+        self.color_r = color_recognization(choice=choice)
 
 

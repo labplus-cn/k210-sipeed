@@ -80,7 +80,8 @@ class QRCode_recognization(object):
         if(choice==1):
             self.sensor.set_vflip(1)
         else:
-            self.sensor.set_vflip(0)
+            self.sensor.set_brightness((-1))
+        self.sensor.set_vflip(1)
         self.sensor.set_hmirror(1)
         self.sensor.run(1)
        

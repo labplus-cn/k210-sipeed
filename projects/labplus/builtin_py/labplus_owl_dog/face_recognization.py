@@ -177,6 +177,13 @@ class Face_recognization(object):
             self.sensor.set_vflip(0)
         self.sensor.set_hmirror(1)
         self.sensor.run(1)
+
+    def save_data(self):
+        f = open("face_record_ftrs.py", "w")
+        f.write(self.record_ftrs)
+        f.close()
+        f.open("face_record_ftrs.py", "r")
+        print(f.read())
     
     def __del__(self):
         a = self.kpu.deinit(self.task_fe)

@@ -9,8 +9,12 @@ XGOorder 用来存放命令地址和对应数据
 XGOorder is used to store the command address and corresponding data
 """
 XGOorder = {
-    "BATTERY": [0x01,100],
+    "BATTERY": [0x01, 100],
     "PERFORM": [0x03, 0],
+    "CALIBRATION":[0x04,0],
+    "UPGRADE": [0x05, 0],
+    "MOVE_TEST":[0x06,1],
+    "VERSION":[0x07],
     "UNLOAD_MOTOR": [0x20, 0],
     "LOAD_MOTOR": [0x20, 0],
     "VX": [0x30, 128],
@@ -545,3 +549,10 @@ class XGO():
                         self.rx_ADDR = 0
                         self.rx_LEN = 0
         return False
+        
+    def calibration(self,state):
+        """
+        用于软件标定，请谨慎使用！！！
+        """
+        XGOorder["CALIBRATION"][1] = state
+        self.__send("CALIBRATION")
