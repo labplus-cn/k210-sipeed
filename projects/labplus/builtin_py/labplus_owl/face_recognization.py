@@ -23,6 +23,7 @@ class Face_recognization(object):
         self.dst_point = [(44, 59), (84, 59), (64, 82), (47, 105),
                     (81, 105)]  # standard face key point position        
         self.accuracy = accuracy
+        self.feature_file_exits = 0
 
         self.names = ['ID:0', 'ID:1', 'ID:2', 'ID:3', 'ID:4',
                 'ID:5', 'ID:6', 'ID:7', 'ID:8', 'ID:9']
@@ -37,9 +38,13 @@ class Face_recognization(object):
         self.record_ftr = []
         self.record_ftrs = []
         self.change_camera(choice=choice)
+        self.init_data()
+        self.load_data()
         time.sleep(3)
 
     def add_face(self):
+        print('555')
+        self.clear_data()
         tmp_num = 0
         while True:
             img = self.sensor.snapshot()
@@ -85,6 +90,7 @@ class Face_recognization(object):
                         if self.key.value() == 0:
                             self.record_ftr = feature
                             self.record_ftrs.append(self.record_ftr)
+                            self.save_data(self.record_ftr)
                             # print("add a face.")
                             # a = img.draw_string(5,15, "Add a face, id={0}".format(tmp_num), color=(0, 255, 0), scale=1)
                             Draw_CJK_String('添加人脸数据, id={0}'.format(tmp_num), 5, 20, img, color=(0, 255, 0))
@@ -177,6 +183,45 @@ class Face_recognization(object):
         self.sensor.set_hmirror(1)
         self.sensor.run(1)
     
+    #保存数据
+    def save_data(self, record_ftr):
+        with open("_face_record_ftrs.txt", "a") as f:
+            f.write(str(record_ftr))
+            f.write("\n")
+            f.close()
+
+    #载入数据
+    def load_data(self):
+        if(self.feature_file_exits):
+            with open("_face_record_ftrs.txt", "rb") as f:
+                while(1):
+                    line = f.readline()
+                    if not line:
+                        break
+                    self.record_ftrs.append(eval(line))
+                    time.sleep_ms(5)
+                f.close()
+
+    #初始化数据
+    def init_data(self):
+        import os
+        self.feature_file_exits = 0
+        for v in os.listdir('/flash'):
+            if v == '_face_record_ftrs.txt':
+                self.feature_file_exits = 1
+    
+        if(self.feature_file_exits==0):
+            with open("_face_record_ftrs.txt", "w") as f:
+                f.close()
+
+    #清空数据
+    def clear_data(self):
+        self.record_ftr = []
+        self.record_ftrs = []
+        with open("_face_record_ftrs.txt", "w") as f:
+            f.close()
+        time.sleep_ms(5)
+
     def __del__(self):
         a = self.kpu.deinit(self.task_fe)
         a = self.kpu.deinit(self.task_ld)
