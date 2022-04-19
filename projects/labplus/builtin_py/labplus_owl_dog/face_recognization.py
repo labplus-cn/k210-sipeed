@@ -186,7 +186,7 @@ class Face_recognization(object):
 
     #保存数据
     def save_data(self, record_ftr):
-        with open("_face_record_ftrs.txt", "a") as f:
+        with open("/flash/_face_record_ftrs.txt", "a") as f:
             f.write(str(record_ftr))
             f.write("\n")
             f.close()
@@ -194,7 +194,7 @@ class Face_recognization(object):
     #载入数据
     def load_data(self):
         if(self.feature_file_exits):
-            with open("_face_record_ftrs.txt", "rb") as f:
+            with open("/flash/_face_record_ftrs.txt", "rb") as f:
                 while(1):
                     line = f.readline()
                     if not line:
@@ -212,14 +212,14 @@ class Face_recognization(object):
                 self.feature_file_exits = 1
 
         if(self.feature_file_exits==0):
-            with open("_face_record_ftrs.txt", "w") as f:
+            with open("/flash/_face_record_ftrs.txt", "w") as f:
                 f.close()
 
     #清空数据
     def clear_data(self):
         self.record_ftr = []
         self.record_ftrs = []
-        with open("_face_record_ftrs.txt", "w") as f:
+        with open("/flash/_face_record_ftrs.txt", "w") as f:
             f.close()
         time.sleep_ms(5)
 

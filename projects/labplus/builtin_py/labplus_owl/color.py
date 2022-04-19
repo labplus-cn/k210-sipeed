@@ -15,12 +15,15 @@ class color_recognization(object):
         self.mylist = [0,0,0]
         # green_threshold = (0, 80, -70, -10, -0, 30)
         self.threshold_list = []
+        self.color_file_exits = 0
 
         fm.register(16, fm.fpioa.GPIOHS0+16)
         self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
 
         self.change_camera(choice=choice)
-        time.sleep(3)
+        self.init_data()
+        self.load_data()
+        time.sleep(5)
     
     def change_camera(self, choice):
         try:
@@ -39,6 +42,7 @@ class color_recognization(object):
         self.sensor.skip_frames(10)
 
     def add_color(self,num):
+        self.clear_data()
         mylist = [0,0,0]
         index = -1
         while True:
@@ -76,6 +80,7 @@ class color_recognization(object):
                 if self.key.value() == 0:
                     index += 1
                     self.threshold_list.append(LAB)
+                    self.save_data(LAB)
                     Draw_CJK_String('添加待识别颜色，id：{0}'.format(index), 5, 20, img, color=(0, 0, 128))
                     # img.draw_string(5,35, 'L_min:{0},L_max:{1},A_min:{2},A_max:{3},B_min:{4},B_max:{5}'.format(LAB[0],LAB[1],LAB[2],LAB[3],LAB[4],LAB[5]), scale=1) 
                     self.lcd.display(img)
@@ -112,6 +117,47 @@ class color_recognization(object):
             #             tmp=img.draw_rectangle([b.x(), b.y(), b.w(), b.h()])
         self.lcd.display(img)
         return id
+    
+        #保存数据
+    def save_data(self, record):
+        print('color_record')
+        with open("/flash/_color_record.txt", "a") as f:
+            f.write(str(record))
+            f.write("\n")
+            f.close()
+
+    #载入数据
+    def load_data(self):
+        print(222)
+        if(self.color_file_exits):
+            with open("/flash/_color_record.txt", "r") as f:
+                while(1):
+                    line = f.readline()
+                    if not line:
+                        break
+                    self.threshold_list.append(eval(line))
+                    time.sleep_ms(5)
+                f.close()
+
+    #初始化数据
+    def init_data(self):
+        print(111)
+        import os
+        for v in os.listdir('/flash'):
+            if v == '_color_record.txt':
+                self.color_file_exits = 1
+    
+        if(self.color_file_exits==0):
+            with open("/flash/_color_record.txt", "w") as f:
+                f.close()
+
+    #清空数据
+    def clear_data(self):
+        print(444)
+        self.threshold_list = []
+        with open("/flash/_color_record.txt", "w") as f:
+            f.close()
+        time.sleep_ms(3)
 
 
 

@@ -11,7 +11,10 @@ class QRCode_recognization(object):
     def __init__(self, choice=1):
         self.lcd = lcd
         self.sensor = sensor
-        self.QRCodeName = [None]*30
+        self.QRCodeName = []
+        self.qrcode_file_exits = 0
+        self.init_data()
+        self.load_data()
 
         fm.register(16, fm.fpioa.GPIOHS0+16)
         self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
@@ -20,7 +23,9 @@ class QRCode_recognization(object):
         time.sleep(3)
 
     def add_qrcode(self, num):
+        self.clear_data()
         index = -1
+        info = None
         while True:
             img = self.sensor.snapshot()
             res = img.find_qrcodes()
@@ -34,9 +39,11 @@ class QRCode_recognization(object):
                     time.sleep_ms(30)
                     if self.key.value() == 0:
                         index += 1
-                        self.QRCodeName[index] = res[0].payload()
+                        info = res[0].payload()
+                        self.save_data(info)
+                        self.QRCodeName.append(info)
                         Draw_CJK_String('已添加二维码, id:{0}'.format(index), 5, 30, img, color=(0, 0, 128))
-                        Draw_CJK_String('二维码数据: {0}'.format(res[0].payload()), 5, 43, img, color=(0, 0, 128))
+                        Draw_CJK_String('二维码数据: {0}'.format(info), 5, 43, img, color=(0, 0, 128))
                         self.lcd.display(img)
                         time.sleep(3)
                         if index >= num-1:
@@ -84,4 +91,40 @@ class QRCode_recognization(object):
         self.sensor.set_vflip(1)
         self.sensor.set_hmirror(1)
         self.sensor.run(1)
-       
+    
+        #保存数据
+    def save_data(self, record):
+        with open("/flash/_qrcode_record.txt", "a") as f:
+            f.write(str(record))
+            f.write("\n")
+            f.close()
+
+    #载入数据
+    def load_data(self):
+        if(self.qrcode_file_exits):
+            with open("/flash/_qrcode_record.txt", "r") as f:
+                while(1):
+                    line = f.readline()
+                    if not line:
+                        break
+                    self.QRCodeName.append(line.rstrip())
+                    time.sleep_ms(5)
+                f.close()
+
+    #初始化数据
+    def init_data(self):
+        import os
+        for v in os.listdir('/flash'):
+            if v == '_qrcode_record.txt':
+                self.qrcode_file_exits = 1
+    
+        if(self.qrcode_file_exits==0):
+            with open("/flash/_qrcode_record.txt", "w") as f:
+                f.close()
+
+    #清空数据
+    def clear_data(self):
+        self.QRCodeName = []
+        with open("/flash/_qrcode_record.txt", "w") as f:
+            f.close()
+        time.sleep_ms(3)
