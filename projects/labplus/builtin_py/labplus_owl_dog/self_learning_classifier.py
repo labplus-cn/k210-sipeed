@@ -5,6 +5,7 @@ from Maix import GPIO
 from fpioa_manager import fm
 import time
 import gc
+import os
 from display import Draw_CJK_String
 
 class Self_learning_classifier(object):
@@ -17,6 +18,7 @@ class Self_learning_classifier(object):
     self.sensor = sensor
     self.kpu = kpu
     self.lcd = lcd
+    self.model_file_exits = 0
     gc.collect()
 
     #A键
@@ -32,9 +34,21 @@ class Self_learning_classifier(object):
 
     self.change_camera(choice=choice)
     time.sleep(3)
+    # self.auto_load_model()
+    # time.sleep(1)
 
   # snapshot every class
   def add_class_img(self):
+    # try:
+    #   del self.classifier
+    # except:
+    #   print("del model fail -222-")
+    # gc.collect()
+    # time.sleep(5)
+    # self.classifier = self.kpu.classifier(self.model, self._class_num, self._sample_num)
+    # print(self._class_num)
+    # print(self._sample_num)
+    # time.sleep(5)
     while True:
       img = self.sensor.snapshot()
       # img = img.draw_string(0, 0, "add class image", color=(0,255,0),scale=2)
@@ -49,7 +63,7 @@ class Self_learning_classifier(object):
             lcd.display(img)
             time.sleep_ms(3000)
             if index >= self.class_num-1:
-              print("Add class img successed.")
+              # print("Add class img successed.")
               del img
               break
       lcd.display(img)
@@ -79,6 +93,12 @@ class Self_learning_classifier(object):
   def train(self):
     print("start train")
     self.classifier.train()
+    # time.sleep_ms(50)
+    # if(self.model_file_exits):
+    #   os.remove("_self_learn.classifier")
+    # time.sleep_ms(50)
+    # self.save_classifier("_self_learn.classifier")
+    # time.sleep_ms(50)
 
   def predict(self):
     img = self.sensor.snapshot()
@@ -100,17 +120,20 @@ class Self_learning_classifier(object):
         lcd.display(img)
         return None
 
-  def save_classifier(self, name="classes.classifier"):
-    self.classifier.save(name)
+  def save_classifier(self, name="_self_learn.classifier"):
+    try:
+      self.classifier.save(name)
+    except:
+      print("save model fail")
 
-  def load_classifier(self, name="classes.classifier"):
+  def load_classifier(self, name="_self_learn.classifier"):
     try:
       del self.classifier
     except:
       print("del model fail")
     gc.collect()
+    # self._class_num, self._sample_num = self.class_num, self.sample_num
     self.classifier, self.class_num, self.sample_num = kpu.classifier.load(self.model, name)
-    # print(self.class_num)
   
   def change_camera(self, choice):
         try:
@@ -126,3 +149,18 @@ class Self_learning_classifier(object):
             self.sensor.set_vflip(0)
         self.sensor.set_hmirror(1)
         self.sensor.run(1)
+
+  #
+  def auto_load_model(self):
+      self.model_file_exits = 0
+      for v in os.listdir('/flash'):
+          if v == '_self_learn.classifier':
+              self.model_file_exits = 1
+              print('model exit!!!--')
+          else:
+              pass
+              # print('null')
+      
+      if(self.model_file_exits):
+        self.load_classifier("_self_learn.classifier")
+            

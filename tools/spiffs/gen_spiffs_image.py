@@ -4,8 +4,8 @@ import argparse
 import os
 import re
 
-in_dir  = "fs"
-out_dir = "fs_image"
+in_dir  = "/home/labplus/maixpy/tools/spiffs/fs"
+out_dir = "/home/labplus/maixpy/tools/spiffs/fs_image"
 out_name = "maixpy_spiffs.img"
 
 parser = argparse.ArgumentParser(description='generate spiffs image', prog="gen_spiffs_image.py")
@@ -27,13 +27,13 @@ if len(os.listdir(in_dir)) == 0:
     print("[WARNING] No file in fs dir, so the image will be empty")
  
 # check submodule
-if len(os.listdir("mkspiffs")) == 0:
+if len(os.listdir("/home/labplus/maixpy/tools/spiffs/mkspiffs")) == 0:
     ret = os.system("git submodule update --init mkspiffs")
     if ret != 0:
         print("[ERROR] update submodule mkspiffs fail")
         exit(1)
 
-if len(os.listdir("mkspiffs/spiffs")) == 0:
+if len(os.listdir("/home/labplus/maixpy/tools/spiffs/mkspiffs/spiffs")) == 0:
     os.chdir("mkspiffs")
     ret = os.system("git submodule update --init spiffs")
     if ret != 0:

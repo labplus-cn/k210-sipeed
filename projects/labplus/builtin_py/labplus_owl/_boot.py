@@ -42,16 +42,16 @@ try:
 except Exception:
     is_debug = False
 
-
-
 from labplus import *
-from fpioa_manager import fm
+
+
+# from fpioa_manager import fm
 
 if not is_debug:
-    repl = UART.repl_uart()
-    repl.init(2000000, 8, None, 1, read_buf_len=2048)
-    fm.fpioa.set_function(33, FPIOA.UARTHS_RX)
-    fm.fpioa.set_function(32, FPIOA.UARTHS_TX)
+    # repl = UART.repl_uart()
+    # repl.init(2000000, 8, None, 1, read_buf_len=2048)
+    # fm.fpioa.set_function(33, FPIOA.UARTHS_RX)
+    # fm.fpioa.set_function(32, FPIOA.UARTHS_TX)
 
     # print('hello, world')
     # fm.register(11, fm.fpioa.UART2_TX)
@@ -59,8 +59,5 @@ if not is_debug:
     # uart = machine.UART(machine.UART.UART2)
     # uart.init(115200, 8, None, 1, timeout=100, read_buf_len=2048)
     # machine.UART.set_repl_uart(uart)
-
-# 硬件复位标志
-for count in range(3):
-    print("=$%#=")
-    time.sleep_ms(150)
+    
+    import machine
