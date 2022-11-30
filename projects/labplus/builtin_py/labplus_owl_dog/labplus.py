@@ -1,7 +1,9 @@
-from machine import I2C
-from Maix import GPIO, FPIOA
+import time
 import KPU as kpu
 import sensor, lcd, image
+from machine import I2C
+from machine import UART
+from Maix import GPIO, FPIOA
 from board import button, LED
 from display import *
 from speech_recognizition import speech_recognize
@@ -9,11 +11,9 @@ from face_recognization import Face_recognization
 from self_learning_classifier import Self_learning_classifier
 from qrcode import QRCode_recognization
 from color import color_recognization
-from modules import ws2812
-import time
 from fpioa_manager import fm
-from machine import UART
 from xgo import XGO
+from modules import ws2812
 class Button():
     def __init__(self):
         fm.register(16, fm.fpioa.GPIOHS16, force=True)

@@ -75,6 +75,8 @@ class  speech_recognize(object):
         if key in self.sets_key_id:
           id = self.sets_key_id[key]
       return id 
+    else:
+      return None
 
   def asr_release(self):
     self.tim.stop()
