@@ -106,9 +106,9 @@ class Color(object):
                     pixels = b.pixels()
                     if(pixels>=2000):
                         id = i
-                        # break
                         # Draw_CJK_String('ID：{0}'.format(id), self.roi[0], self.roi[1]-15, img, color=(0, 128, 0))
                         # self.lcd.draw_string(0, 50, '5:'+str(e), self.lcd.WHITE, self.lcd.BLUE)
+                        # break
                     else:
                         id = None
                         pass
@@ -130,7 +130,6 @@ class Color(object):
 
     #载入数据
     def load_data(self):
-        print(222)
         if(self.color_file_exits):
             with open("/flash/_color_record.txt", "r") as f:
                 while(1):
@@ -143,7 +142,6 @@ class Color(object):
 
     #初始化数据
     def init_data(self):
-        print(111)
         import os
         for v in os.listdir('/flash'):
             if v == '_color_record.txt':
@@ -155,7 +153,6 @@ class Color(object):
 
     #清空数据
     def clear_data(self):
-        print(444)
         self.threshold_list = []
         with open("/flash/_color_record.txt", "w") as f:
             f.close()

@@ -60,8 +60,4 @@ from labplus import *
     # uart.init(115200, 8, None, 1, timeout=100, read_buf_len=2048)
     # machine.UART.set_repl_uart(uart)
     
-<<<<<<< HEAD
     # import machine
-=======
-    import machine
->>>>>>> 68ada4ad480a11df8ff2200602470a82fd689f3f

@@ -1,6 +1,6 @@
 
 import time
-# import KPU as kpu
+import gc
 
 class Guidepost(object):
     def __init__(self,choice=1,sensor=None,kpu=None,lcd=None):
@@ -32,6 +32,8 @@ class Guidepost(object):
 
     def __del__(self):
         a = self.kpu.deinit(self.task)
+        del self.task
+        gc.collect()
 
     def change_camera(self, choice):
         try:

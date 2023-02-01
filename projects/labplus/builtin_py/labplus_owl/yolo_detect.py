@@ -1,4 +1,5 @@
 import time
+import gc
 
 class YOLO_DETECT(object):
     def __init__(self,choice,sensor,kpu,lcd):
@@ -33,6 +34,8 @@ class YOLO_DETECT(object):
 
     def __del__(self):
         a = self.kpu.deinit(self.task)
+        del self.task
+        gc.collect()
 
     def change_camera(self, choice):
         try:

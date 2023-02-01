@@ -7,6 +7,7 @@ import sensor, lcd, image
 from board import button, LED
 from display import *
 from modules import ws2812
+import gc
 
 from fpioa_manager import fm
 # rgb_led = ws2812(34,2)
@@ -20,6 +21,8 @@ from color import *
 from qrcode import *
 from guidepost import *
 from kpu_kmodel import *
+from track import *
+
 
 """ 
 -------------------------------------------------------------------------------------------------------
@@ -43,6 +46,7 @@ QRCODE_MODE = 8
 SPEECH_RECOGNIZATION_MODE = 9
 GUIDEPOST_MODE = 10 #清华教材交通标志识别
 KPU_MODEL_MODE = 11 #自定义模型
+TRACK_MODE= 12
 
 
 class AICamera(object):
@@ -59,20 +63,24 @@ class AICamera(object):
             self.flag_face_detection = 0
             self.flag_asr_recognize = 0
             self.flag_slc_recognize = 0
-            self.flag_guidepost_recognize = 0
             self.flag_slc_add = 0
             self.slc_mode_name = ''
             self.flag_slc_mode_save = 0
             self.flag_slc_mode_load = 0
+            #
             self.flag_color_add = 0
             self.flag_color_recognize = 0
             #
             self.flag_qrcode_add = 0
             self.flag_qrcode_recognize = 0
             #
+            self.flag_guidepost_recognize = 0
+            #KPU
             self.kpu_kmodel_name = ''
             self.flag_kpu_kmodel_init = 0
             self.flag_kpu_recognize=0
+            #
+            self.flag_track_recognize=0
             
 
     def __init__(self):
@@ -80,12 +88,16 @@ class AICamera(object):
         fm.register(33, fm.fpioa.UART2_RX, force=True)
         # self.uart = UART(UART.UART2, 115200, 8, 0, 0, timeout=1000, read_buf_len=4096)
         self.uart = UART(UART.UART2)
-        self.uart.init(115200, 8, None, 1, timeout=1000, read_buf_len=4096)
-        time.sleep(0.2)
+        self.uart.init(1152000, 8, None, 1, timeout=1000, read_buf_len=4096)
+        time.sleep(0.1)
         
         # RGB
         self.rgb_led = ws2812(34,2)
-        self.sensor = sensor
+        try:
+            self.sensor = sensor
+        except:
+            self.lcd.clear(lcd.BLUE)
+            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "init sensor err!", lcd.WHITE, lcd.BLUE) 
         self.lcd = lcd
         self.kpu = kpu
         self.lcd.init(freq=15000000, invert=1)
@@ -106,7 +118,7 @@ class AICamera(object):
         # button
         self.btn_A = button(16)
         self.btn_B = button(17)
-        time.sleep(3)
+        time.sleep(0.2)
 
         # new
         self.k210 = self.K210()
@@ -116,6 +128,8 @@ class AICamera(object):
         self.face_detect = None
         self.color = None
         self.mnist = None
+        self.guidepost = None
+        self.track = None
       
         #开始串口监听
         self.uart_listen()
@@ -140,21 +154,24 @@ class AICamera(object):
         self.uart.write(bytes(CMD_TEMP))
         self.uart.write(bytes([check_sum & 0xFF]))
         
-
-    def AI_Uart_CMD_String(self, data_type, cmd, cmd_type, str_buf=0):
+    def AI_Uart_CMD_String(self,cmd=0x00, cmd_type=0x00, cmd_data=[0, 0, 0], str_len=0, str_buf=''):
         check_sum = 0
-        CMD_TEMP = [0xBB, 0xAA, data_type, cmd, cmd_type]
-        for i in range(len(CMD_TEMP)):
-            check_sum = check_sum+CMD_TEMP[i]
-        #print_x16(CMD_TEMP)
-        self.uart.write(bytes(CMD_TEMP))
-        if str_buf:
-            str_temp = bytes(str_buf, 'utf-8')
-            self.uart.write(str_temp)
-            for i in range(len(str_temp)):
-                check_sum = check_sum + str_temp[i]
-            self.uart.write(bytes([check_sum & 0xFF])) 
-        
+        CMD = [0xBB, 0xAA, 0x02, cmd, cmd_type]
+        CMD.extend(cmd_data)
+        for i in range(3-len(cmd_data)):
+            CMD.append(0)
+        for i in range(len(CMD)):
+            check_sum = check_sum+CMD[i]
+        # print_x16(CMD)
+        self.uart.write(bytes(CMD))
+        str_temp = bytes(str_buf, 'utf-8')
+        str_len = len(str_temp)
+        self.uart.write(bytes([str_len]))
+        self.uart.write(str_temp)
+        # lcd.draw_string(0,50, 'str:'+str(str_temp), lcd.WHITE, lcd.BLUE)
+        for i in range(len(str_temp)):
+            check_sum = check_sum + str_temp[i]
+        self.uart.write(bytes([check_sum & 0xFF]))   
     
     def print_x16(self,date):
         for i in range(len(date)):
@@ -182,7 +199,7 @@ class AICamera(object):
                 else:
                     _cmd = self.uart.read()
                     del _cmd
-                    # pass
+                    gc.collect()
 
     
     def uart_handle(self):
@@ -196,11 +213,11 @@ class AICamera(object):
                 cmd_type = self.uart.read(1)
                 CMD_TEMP.append(cmd_type[0])
                 if(CMD_TEMP[2]==0x01):
-                    res = self.uart.read(9)
-                    for i in range(9):
+                    res = self.uart.read(11)
+                    for i in range(11):
                         CMD_TEMP.append(res[i])                  
-                    checksum = self.CheckCode(CMD_TEMP[:11])
-                    if(res and checksum == CMD_TEMP[11]):
+                    checksum = self.CheckCode(CMD_TEMP[:13])
+                    if(res and checksum == CMD_TEMP[13]):
                         # self.lcd.draw_string(0,215, 'cmd:'+str(CMD_TEMP[2:]), lcd.WHITE, lcd.BLUE)
                         self.process_cmd(CMD_TEMP)
                 elif(CMD_TEMP[2]==0x02):
@@ -218,6 +235,7 @@ class AICamera(object):
             else:
                 _cmd = self.uart.read()
                 del _cmd
+                gc.collect()
 
     def process_cmd(self,cmd):
         CMD = cmd
@@ -301,7 +319,15 @@ class AICamera(object):
                     pass
                 elif(CMD[3]==KPU_MODEL_MODE and CMD[4]==0x03):
                     self.k210.flag_kpu_recognize = 1
-            if(CMD[2]==0x02):
+                elif(CMD[3]==TRACK_MODE and CMD[4]==0x01):
+                    self.k210.mode = TRACK_MODE
+                    self.track = Track(lcd=self.lcd,sensor=self.sensor,choice=CMD[5],threshold=[CMD[6],CMD[7],CMD[8],CMD[9],CMD[10],CMD[11]])
+                elif(CMD[3]==TRACK_MODE and CMD[4]==0x03):
+                    self.track.threshold = [CMD[5],CMD[6],CMD[7],CMD[8],CMD[9],CMD[10]]
+                    self.track.area_threshold = CMD[11]
+                elif(CMD[3]==TRACK_MODE and CMD[4]==0x02):
+                    self.k210.flag_track_recognize = 1
+            elif(CMD[2]==0x02):
                 if(CMD[3]==SPEECH_RECOGNIZATION_MODE and CMD[4]==0x02):
                     _config ={}
                     str_temp = bytes(CMD[9:-1])
@@ -328,14 +354,14 @@ class AICamera(object):
                     # self.lcd.draw_string(50,205, 'ss:'+str(CMD[5]), lcd.WHITE, lcd.BLUE)
                     self.k210.mode = KPU_MODEL_MODE
                     self.kpu_model = KPU_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=mode_name)
-
+                
     def uart_listen(self):
         self.send_to_zkb_init()
         num = 0
         while True:
             gc.collect()
-            time.sleep_ms(5)
-            num+=1
+            time.sleep_ms(1)
+            # num+=1
             # lcd.draw_string(200,0, 'listen:'+str(num), lcd.WHITE, lcd.BLUE)
             # lcd.draw_string(0,0, 'mode:'+str(self.k210.mode), lcd.WHITE, lcd.BLUE)
             self.uart_handle()
@@ -440,17 +466,39 @@ class AICamera(object):
                         else:
                             self.AI_Uart_CMD(0x01,0x0b,0x03,cmd_data=[id,value])
                         self.k210.flag_kpu_recognize = 0
+                elif(self.k210.mode==TRACK_MODE and self.track!=None):
+                    if(self.k210.flag_track_recognize):
+                        x,y,cx,cy,w,h,pixels,count= self.track.recognize()
+                        if(x==None):
+                            self.AI_Uart_CMD(0x01,0x0c,0x02,cmd_data=[0xff])
+                        else:
+                            # self.AI_Uart_CMD(0x01,0x0c,0x02,cmd_data=[x,y,cx,cy,w,h])
+                            _str=str(x)+'|'+str(y)+'|'+str(cx)+'|'+str(cy)+'|'+str(w)+'|'+str(h)+'|'+str(pixels)+'|'+str(count)
+                            self.AI_Uart_CMD_String(cmd=0x0c,cmd_type=0x02,str_buf=_str)
+                        self.k210.flag_track_recognize = 0
             except Exception as e:
                 lcd.draw_string(0,180, 'err:'+str(e), lcd.WHITE, lcd.BLUE)
 
     def reset(self):
         self.AI_Uart_CMD(0x01,0x01,0xFF)
-        time.sleep(0.2)
+        time.sleep(0.1)
         machine.reset()
     
     def switcherMode(self, mode):
-        self.k210.mode = mode
-        # self.lcd.draw_string(0,215, 'mode:'+str(mode), lcd.WHITE, lcd.BLUE)
+        if(self.k210.mode==GUIDEPOST_MODE):
+            self.guidepost.__del__()
+            del self.guidepost
+        elif(self.k210.mode==TRACK_MODE):
+            self.track.__del__()
+            del self.track
+        
+        _cmd = self.uart.read()
+        del _cmd
+        time.sleep(0.2)
+        self.AI_Uart_CMD(0x01,0x01,0xFE)
+        self.k210.mode = DEFAULT_MODE
+        self.lcd.draw_string(0,215, 'mode:'+str(self.k210.mode), lcd.WHITE, lcd.BLUE)
+        
         gc.collect()
 
     def change_camera(self, choice):
