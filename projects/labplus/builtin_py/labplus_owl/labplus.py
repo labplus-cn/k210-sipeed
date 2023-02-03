@@ -32,7 +32,6 @@ from track import *
 
 Order ={
     'lcd':['clear'],
-
 }
 
 DEFAULT_MODE = 1
@@ -86,9 +85,8 @@ class AICamera(object):
     def __init__(self):
         fm.register(32, fm.fpioa.UART2_TX, force=True)
         fm.register(33, fm.fpioa.UART2_RX, force=True)
-        # self.uart = UART(UART.UART2, 115200, 8, 0, 0, timeout=1000, read_buf_len=4096)
         self.uart = UART(UART.UART2)
-        self.uart.init(1152000, 8, None, 1, timeout=1000, read_buf_len=4096)
+        self.uart.init(1152000, 8, None, 1, timeout=1000, read_buf_len=192)
         time.sleep(0.1)
         
         # RGB
@@ -110,7 +108,7 @@ class AICamera(object):
             self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera", lcd.WHITE, lcd.BLUE) 
         
         # Camera
-        self.change_camera(1)
+        self.change_camera(_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565)
 
         # Image
         # self.img = image.Image()
@@ -118,7 +116,7 @@ class AICamera(object):
         # button
         self.btn_A = button(16)
         self.btn_B = button(17)
-        time.sleep(0.2)
+        time.sleep(0.1)
 
         # new
         self.k210 = self.K210()
@@ -130,6 +128,19 @@ class AICamera(object):
         self.mnist = None
         self.guidepost = None
         self.track = None
+
+        #sensor config
+        self._choice=1
+        self. _framesize=sensor.QVGA
+        self._pixformat=sensor.RGB565
+        self._w=320
+        self. _h=240
+        self._vflip=1
+        self._hmirror=1
+        self._brightness=0
+        self._contrast=0
+        self._saturation=0
+        self._gain=False
       
         #开始串口监听
         self.uart_listen()
@@ -180,6 +191,7 @@ class AICamera(object):
 
     def send_to_zkb_init(self): #tx
         while True:
+            gc.collect()
             time.sleep_ms(10)
             if(self.uart.any()):
                 head=self.uart.read(2)
@@ -243,7 +255,7 @@ class AICamera(object):
             if(CMD[2]==0x01):
                 if(CMD[3]==0x01 and CMD[4]==0xFF):
                     self.reset()
-                if(CMD[3]==0x01 and CMD[4]==0xFE):
+                elif(CMD[3]==0x01 and CMD[4]==0xFE):
                     self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
                     self.k210.mode = MNIST_MODE
@@ -321,10 +333,11 @@ class AICamera(object):
                     self.k210.flag_kpu_recognize = 1
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x01):
                     self.k210.mode = TRACK_MODE
-                    self.track = Track(lcd=self.lcd,sensor=self.sensor,choice=CMD[5],threshold=[CMD[6],CMD[7],CMD[8],CMD[9],CMD[10],CMD[11]])
+                    self.track = Track(lcd=self.lcd,sensor=self.sensor,choice=CMD[5])
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x03):
-                    self.track.threshold = [CMD[5],CMD[6],CMD[7],CMD[8],CMD[9],CMD[10]]
-                    self.track.area_threshold = CMD[11]
+                    # self.track.threshold = [CMD[5],CMD[6],CMD[7],CMD[8],CMD[9],CMD[10]]
+                    # self.track.area_threshold = CMD[11]
+                    pass
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x02):
                     self.k210.flag_track_recognize = 1
             elif(CMD[2]==0x02):
@@ -349,18 +362,37 @@ class AICamera(object):
                 elif(CMD[3]==KPU_MODEL_MODE and CMD[4]==0x02):
                     str_temp = bytes(CMD[9:-1])
                     mode_name = str(str_temp.decode('UTF-8','ignore'))
-                    # self.k210.kpu_kmodel_name = mode_name
-                    # self.lcd.draw_string(50,225, 's:'+str(str_temp.decode('UTF-8','ignore')), lcd.WHITE, lcd.BLUE)
-                    # self.lcd.draw_string(50,205, 'ss:'+str(CMD[5]), lcd.WHITE, lcd.BLUE)
                     self.k210.mode = KPU_MODEL_MODE
                     self.kpu_model = KPU_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=mode_name)
-                
+                elif(CMD[3]==TRACK_MODE and CMD[4]==0x03):
+                    str_temp = bytes(CMD[9:-1])
+                    _str = str(str_temp.decode('UTF-8','ignore'))
+                    data = _str.split("|")
+                    self.track.set_up([int(data[0]),int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5])],int(data[6]))
+                elif(CMD[3]==TRACK_MODE and CMD[4]==0x04):
+                    str_temp = bytes(CMD[9:-1])
+                    _str = str(str_temp.decode('UTF-8','ignore'))
+                    data = _str.split("|")
+                    # self.track.set_up([int(data[0]),int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5])],int(data[6]))
+                    self._choice=1
+                    self. _framesize=sensor.QVGA
+                    self._pixformat=sensor.RGB565
+                    self._w=320
+                    self. _h=240
+                    self._vflip=1
+                    self._hmirror=1
+                    self._brightness=0
+                    self._contrast=0
+                    self._saturation=0
+                    self._gain=False
+                                    
+
     def uart_listen(self):
         self.send_to_zkb_init()
         num = 0
         while True:
             gc.collect()
-            time.sleep_ms(1)
+            time.sleep_ms(2)
             # num+=1
             # lcd.draw_string(200,0, 'listen:'+str(num), lcd.WHITE, lcd.BLUE)
             # lcd.draw_string(0,0, 'mode:'+str(self.k210.mode), lcd.WHITE, lcd.BLUE)
@@ -477,11 +509,11 @@ class AICamera(object):
                             self.AI_Uart_CMD_String(cmd=0x0c,cmd_type=0x02,str_buf=_str)
                         self.k210.flag_track_recognize = 0
             except Exception as e:
-                lcd.draw_string(0,180, 'err:'+str(e), lcd.WHITE, lcd.BLUE)
+                lcd.draw_string(0,180, str(e), lcd.WHITE, lcd.BLUE)
 
     def reset(self):
         self.AI_Uart_CMD(0x01,0x01,0xFF)
-        time.sleep(0.1)
+        time.sleep_ms(20)
         machine.reset()
     
     def switcherMode(self, mode):
@@ -494,29 +526,35 @@ class AICamera(object):
         
         _cmd = self.uart.read()
         del _cmd
-        time.sleep(0.2)
+        gc.collect()
+
+        time.sleep(0.3)
         self.AI_Uart_CMD(0x01,0x01,0xFE)
         self.k210.mode = DEFAULT_MODE
-        self.lcd.draw_string(0,215, 'mode:'+str(self.k210.mode), lcd.WHITE, lcd.BLUE)
+        self.lcd.draw_string(0,215, 'sw mode', lcd.WHITE, lcd.BLUE)
         
         gc.collect()
 
-    def change_camera(self, choice):
+    def change_camera(self,_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=320,_h=240,_vflip=1,_hmirror=1,_brightness=0,_contrast=0,_saturation=0,_gain=False):
         try:
-            self.sensor.reset(choice=choice)
-            self.sensor.set_pixformat(self.sensor.RGB565)
-            self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_hmirror(1)
+            self.sensor.reset(choice=_choice)
+            self.sensor.set_pixformat(_pixformat)
+            self.sensor.set_framesize(_framesize)
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         
-        if(choice==1):
-            self.sensor.set_vflip(1)
+        if(_choice==1):
+            self.sensor.set_vflip(_vflip)
+            self.sensor.set_hmirror(_hmirror)
         else:
-            self.sensor.set_vflip(0)
-            self.sensor.set_hmirror(0)
-        
+            self.sensor.set_vflip(_vflip) #
+            self.sensor.set_hmirror(_hmirror) #水平镜像
+            self.sensor.set_brightness(_brightness) #亮度
+            self.sensor.set_contrast(_contrast) #对比度
+            self.sensor.set_saturation(_saturation) #饱和度
+            self.sensor.set_auto_gain(_gain)
+        self.sensor.set_windowing((_w,_h))
         self.sensor.skip_frames(30)
         self.sensor.run(1)
     
@@ -524,4 +562,4 @@ try:
     aiCamera=AICamera()
 except Exception as e:
     lcd.clear((0, 0, 255))
-    lcd.draw_string(0,200, 'err:'+str(e), lcd.WHITE, lcd.BLUE)
+    lcd.draw_string(0,200, str(e), lcd.WHITE, lcd.BLUE)
