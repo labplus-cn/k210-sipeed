@@ -45,7 +45,8 @@ QRCODE_MODE = 8
 SPEECH_RECOGNIZATION_MODE = 9
 GUIDEPOST_MODE = 10 #清华教材交通标志识别
 KPU_MODEL_MODE = 11 #自定义模型
-TRACK_MODE= 12
+TRACK_MODE= 12 #色块识别
+COLOR_STATISTICS_MODE=13 # 颜色的统计信息
 
 
 class AICamera(object):
@@ -80,6 +81,7 @@ class AICamera(object):
             self.flag_kpu_recognize=0
             #
             self.flag_track_recognize=0
+            self.flag_color_statistics_recognize = 0
             
 
     def __init__(self):
@@ -87,7 +89,9 @@ class AICamera(object):
         fm.register(33, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
         self.uart.init(1152000, 8, None, 1, timeout=1000, read_buf_len=192)
-        time.sleep(0.1)
+        time.sleep(0.2)
+        self.lcd = lcd
+        self.kpu = kpu
         
         # RGB
         self.rgb_led = ws2812(34,2)
@@ -96,19 +100,22 @@ class AICamera(object):
         except:
             self.lcd.clear(lcd.BLUE)
             self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "init sensor err!", lcd.WHITE, lcd.BLUE) 
-        self.lcd = lcd
-        self.kpu = kpu
+        
         self.lcd.init(freq=15000000, invert=1)
         try:
             background = image.Image('/flash/startup.jpg', copy_to_fb=True)
             self.lcd.display(background)
             del background
-        except:
+        except Exception as e:
             self.lcd.clear(lcd.BLUE)
             self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera", lcd.WHITE, lcd.BLUE) 
+            # time.sleep(3)
+            # lcd.clear((0, 0, 255))
+            # lcd.draw_string(0,200, str(e), lcd.WHITE, lcd.BLUE)
+           
         
         # Camera
-        self.change_camera(_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565)
+        # self.change_camera(_choice=1)
 
         # Image
         # self.img = image.Image()
@@ -128,19 +135,23 @@ class AICamera(object):
         self.mnist = None
         self.guidepost = None
         self.track = None
+        self.color_statistics=None
 
         #sensor config
         self._choice=1
-        self. _framesize=sensor.QVGA
+        self._framesize=sensor.QVGA
         self._pixformat=sensor.RGB565
         self._w=320
-        self. _h=240
+        self._h=240
         self._vflip=1
         self._hmirror=1
         self._brightness=0
         self._contrast=0
         self._saturation=0
-        self._gain=False
+        self._gain=0
+        self._whitebal=0
+        self._freq=24000000
+        self._dual_buff=0
       
         #开始串口监听
         self.uart_listen()
@@ -212,7 +223,6 @@ class AICamera(object):
                     _cmd = self.uart.read()
                     del _cmd
                     gc.collect()
-
     
     def uart_handle(self):
         CMD_TEMP = []
@@ -333,13 +343,24 @@ class AICamera(object):
                     self.k210.flag_kpu_recognize = 1
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x01):
                     self.k210.mode = TRACK_MODE
-                    self.track = Track(lcd=self.lcd,sensor=self.sensor,choice=CMD[5])
-                elif(CMD[3]==TRACK_MODE and CMD[4]==0x03):
-                    # self.track.threshold = [CMD[5],CMD[6],CMD[7],CMD[8],CMD[9],CMD[10]]
-                    # self.track.area_threshold = CMD[11]
-                    pass
+                    self.change_camera(_choice=CMD[5],_framesize=self._framesize,_pixformat=self._pixformat,_w=self._w,_h=self._h,_vflip=self._vflip,_hmirror=self._hmirror,_brightness=self._brightness,_contrast=self._contrast,_saturation=self._saturation,_gain=self._gain,_whitebal=self._whitebal)
+                    self.track = Track(lcd=self.lcd,sensor=self.sensor)
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x02):
                     self.k210.flag_track_recognize = 1
+                elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x01):
+                    self.k210.mode = COLOR_STATISTICS_MODE
+                    if(int(CMD[5])==1):
+                        self.change_camera(_choice=1,_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_w=160,_h=120,_freq=30000000,_dual_buff=1)
+                    else:
+                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=30000000,_dual_buff=1)
+                    self.color_statistics = Color_Statistics(lcd=self.lcd,sensor=self.sensor)  
+                              
+                elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x02 and self.color_statistics!=None ):
+                    self.k210.flag_color_statistics_recognize = 1                               
+                elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x03):
+                    self.color_statistics.set_up_img_binary(int(CMD[5]),int(CMD[6]))             
+                elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x04):
+                    self.color_statistics.set_up_line_binary(int(CMD[5]),int(CMD[6]))                                                                               
             elif(CMD[2]==0x02):
                 if(CMD[3]==SPEECH_RECOGNIZATION_MODE and CMD[4]==0x02):
                     _config ={}
@@ -351,7 +372,6 @@ class AICamera(object):
                 elif(CMD[3]==SELF_LEARNING_CLASSIFIER_MODE and CMD[4]==0x04):
                     str_temp = bytes(CMD[9:-1])
                     mode_name = str(str_temp.decode('UTF-8','ignore'))
-                    # self.lcd.draw_string(50,225, 's:'+str(mode_name), lcd.WHITE, lcd.BLUE)
                     self.k210.slc_mode_name = mode_name
                     self.k210.flag_slc_mode_save = 1
                 elif(CMD[3]==SELF_LEARNING_CLASSIFIER_MODE and CMD[4]==0x05):
@@ -365,26 +385,53 @@ class AICamera(object):
                     self.k210.mode = KPU_MODEL_MODE
                     self.kpu_model = KPU_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=mode_name)
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x03):
+                    # self.lcd.draw_string(0,200, 'tr:'+str(CMD[5]), lcd.WHITE, lcd.BLUE)
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
                     data = _str.split("|")
-                    self.track.set_up([int(data[0]),int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5])],int(data[6]))
-                elif(CMD[3]==TRACK_MODE and CMD[4]==0x04):
+                    _list = []
+                    for i in range(int(CMD[5])):
+                        _data = [int(data[6*i]),int(data[6*i+1]),int(data[6*i+2]),int(data[6*i+3]),int(data[6*i+4]),int(data[6*i+5])]
+                        _list.append(_data)
+
+                    # self.lcd.draw_string(0,115, 'l:'+str(data[-1]), lcd.WHITE, lcd.BLUE)
+                    # self.lcd.draw_string(0,135, 'l:'+str(_list[1]), lcd.WHITE, lcd.BLUE)
+                    # time.sleep(5)
+                    self.track.set_up(_list,int(data[-1]))
+                   
+                    
+                elif(CMD[3]==0x64 and CMD[4]==0x01):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
                     data = _str.split("|")
-                    # self.track.set_up([int(data[0]),int(data[1]),int(data[2]),int(data[3]),int(data[4]),int(data[5])],int(data[6]))
-                    self._choice=1
-                    self. _framesize=sensor.QVGA
-                    self._pixformat=sensor.RGB565
-                    self._w=320
-                    self. _h=240
-                    self._vflip=1
-                    self._hmirror=1
-                    self._brightness=0
-                    self._contrast=0
-                    self._saturation=0
-                    self._gain=False
+                    self._choice=CMD[5]
+                    if(int(data[0])==1):
+                        self._framesize=sensor.QVGA
+                    elif(int(data[0])==2):
+                        self._framesize=sensor.QQVGA
+                        self.lcd.draw_string(0,215, 'QQVGA', lcd.WHITE, lcd.BLUE)
+                    elif(int(data[0])==3):
+                        self._framesize=sensor.QQQVGA
+                    elif(int(data[0])==4):
+                        self._framesize=sensor.QQQQVGA
+                    else:
+                        self._framesize=sensor.QVGA
+
+                    if(int(data[1])==1):
+                        self._pixformat=sensor.RGB565
+                    elif(int(data[1])==2):
+                        self._pixformat=sensor.GRAYSCALE
+                    self._hmirror=int(data[2])
+                    self._vflip=int(data[3])
+                    self._brightness=int(data[4])
+                    self._contrast=int(data[5])
+                    self._saturation=int(data[6])
+                    self._gain=int(data[7])
+                    self._whitebal=int(data[8])
+                    self._w=int(data[9])
+                    self._h=int(data[10])
+                    self._freq=int(data[11])
+                    self._dual_buff=int(data[12])
                                     
 
     def uart_listen(self):
@@ -392,7 +439,7 @@ class AICamera(object):
         num = 0
         while True:
             gc.collect()
-            time.sleep_ms(2)
+            time.sleep_ms(1)
             # num+=1
             # lcd.draw_string(200,0, 'listen:'+str(num), lcd.WHITE, lcd.BLUE)
             # lcd.draw_string(0,0, 'mode:'+str(self.k210.mode), lcd.WHITE, lcd.BLUE)
@@ -500,14 +547,22 @@ class AICamera(object):
                         self.k210.flag_kpu_recognize = 0
                 elif(self.k210.mode==TRACK_MODE and self.track!=None):
                     if(self.k210.flag_track_recognize):
-                        x,y,cx,cy,w,h,pixels,count= self.track.recognize()
+                        x,y,cx,cy,w,h,pixels,count,code= self.track.recognize()
                         if(x==None):
                             self.AI_Uart_CMD(0x01,0x0c,0x02,cmd_data=[0xff])
                         else:
-                            # self.AI_Uart_CMD(0x01,0x0c,0x02,cmd_data=[x,y,cx,cy,w,h])
-                            _str=str(x)+'|'+str(y)+'|'+str(cx)+'|'+str(cy)+'|'+str(w)+'|'+str(h)+'|'+str(pixels)+'|'+str(count)
+                            _str=str(x)+'|'+str(y)+'|'+str(cx)+'|'+str(cy)+'|'+str(w)+'|'+str(h)+'|'+str(pixels)+'|'+str(count)+'|'+str(code)
                             self.AI_Uart_CMD_String(cmd=0x0c,cmd_type=0x02,str_buf=_str)
                         self.k210.flag_track_recognize = 0
+                elif(self.k210.mode==COLOR_STATISTICS_MODE and self.color_statistics!=None):
+                    if(self.k210.flag_color_statistics_recognize):
+                        data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line= self.color_statistics.recognize()
+                        if(_line==None):
+                            self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
+                        else:
+                            _str=str(data1)+'|'+str(data2)+'|'+str(data3)+'|'+str(data4)+'|'+str(data5)+'|'+str(data6)+'|'+str(data7)+'|'+str(data8)+'|'+str(data9)+'|'+str(data10)+'|'+str(data11)+'|'+str(data12)+'|'+str(data13)+'|'+str(data14)+'|'+str(data15)+'|'+str(_line[0])+'|'+str(_line[1])+'|'+str(_line[2])+'|'+str(_line[3])+'|'+str(_line[4])+'|'+str(_line[5])+'|'+str(_line[6])+'|'+str(_line[7])
+                            self.AI_Uart_CMD_String(cmd=0x0d,cmd_type=0x02,str_buf=_str)
+                        self.k210.flag_color_statistics_recognize = 0
             except Exception as e:
                 lcd.draw_string(0,180, str(e), lcd.WHITE, lcd.BLUE)
 
@@ -523,6 +578,9 @@ class AICamera(object):
         elif(self.k210.mode==TRACK_MODE):
             self.track.__del__()
             del self.track
+        elif(self.k210.mode==COLOR_STATISTICS_MODE):
+            self.color_statistics.__del__()
+            del self.color_statistics
         
         _cmd = self.uart.read()
         del _cmd
@@ -530,33 +588,32 @@ class AICamera(object):
 
         time.sleep(0.3)
         self.AI_Uart_CMD(0x01,0x01,0xFE)
+        time.sleep(0.1)
         self.k210.mode = DEFAULT_MODE
-        self.lcd.draw_string(0,215, 'sw mode', lcd.WHITE, lcd.BLUE)
-        
+        self.lcd.draw_string(0,220, 'sw mode', lcd.WHITE, lcd.BLUE)
         gc.collect()
 
-    def change_camera(self,_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=320,_h=240,_vflip=1,_hmirror=1,_brightness=0,_contrast=0,_saturation=0,_gain=False):
+    def change_camera(self,_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=320,_h=240,_vflip=1,_hmirror=1,_brightness=0,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=0):
         try:
-            self.sensor.reset(choice=_choice)
-            self.sensor.set_pixformat(_pixformat)
+            self.sensor.reset(choice=_choice,freq=_freq,dual_buff=_dual_buff)
             self.sensor.set_framesize(_framesize)
+            self.sensor.set_pixformat(_pixformat)
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         
-        if(_choice==1):
-            self.sensor.set_vflip(_vflip)
-            self.sensor.set_hmirror(_hmirror)
-        else:
-            self.sensor.set_vflip(_vflip) #
-            self.sensor.set_hmirror(_hmirror) #水平镜像
-            self.sensor.set_brightness(_brightness) #亮度
-            self.sensor.set_contrast(_contrast) #对比度
-            self.sensor.set_saturation(_saturation) #饱和度
-            self.sensor.set_auto_gain(_gain)
+        self.sensor.set_vflip(_vflip) 
+        self.sensor.set_hmirror(_hmirror) #水平镜像
+        self.sensor.set_contrast(_contrast) #对比度
+        self.sensor.set_saturation(_saturation) #饱和度
+        self.sensor.set_brightness(_brightness) #亮度
+        self.sensor.set_auto_whitebal(_whitebal)
+        # self.sensor.set_auto_whitebal(False)
+        self.sensor.set_auto_gain(_gain)
         self.sensor.set_windowing((_w,_h))
-        self.sensor.skip_frames(30)
+        self.sensor.skip_frames(20)
         self.sensor.run(1)
+        time.sleep(0.5)
     
 try:
     aiCamera=AICamera()

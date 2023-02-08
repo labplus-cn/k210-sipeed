@@ -30,29 +30,20 @@ img = None
 blobs = None
 blob_num = None
 
-
-# import sensor
-# import lcd
-
-
 class Track(object):
-    def __init__(self, lcd=None, sensor=None, choice=1, threshold=[0, 80, 15, 127, 15, 127], area_threshold=50):
+    def __init__(self, lcd=None, sensor=None, choice=1, threshold=[[0, 80, 15, 127, 15, 127]], area_threshold=50):
         self.lcd = lcd
         self.sensor = sensor
-        self.roi = [135,95,60,60]
-        self.mylist = [0,0,0]
+        self.lcd.init(freq=15000000, invert=1)
         self.threshold = threshold
         self.area_threshold = area_threshold
-        self.threshold_list = []
-        self.color_file_exits = 0
 
-        # fm.register(16, fm.fpioa.GPIOHS0+16)
-        # self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
 
-        self.change_camera(choice=choice)
+        # self.change_camera(choice=choice)
+        
         # self.init_data()
         # self.load_data()
-        time.sleep(1)
+        time.sleep(0.5)
         # self.index = -1
         # self.flag_add = 0
     
@@ -66,17 +57,22 @@ class Track(object):
         self.sensor.set_pixformat(self.sensor.RGB565)
         if(choice==1):
             self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
         else:
             self.sensor.set_vflip(0)
-        self.sensor.set_hmirror(1)
+            self.sensor.set_hmirror(0)
+            self.sensor.set_brightness(2)
+            self.sensor.set_contrast(-1)
+            self.sensor.set_saturation(0)
+            self.sensor.set_auto_gain(0)
         self.sensor.run(1)
-        self.sensor.skip_frames(10)
+        self.sensor.skip_frames(20)
 
     def recognize(self):
-        # img.draw_rectangle(self.roi,(0,255,0),2,0)
         self.img = self.sensor.snapshot()
-        Draw_CJK_String('巡线识别中...', 5, 5, self.img, color=(0, 128, 0))
-        smart_camera_blobs_ret = self.img.find_blobs([self.threshold], area_threshold=self.area_threshold, merge=True)
+        # Draw_CJK_String('寻找色块...', 5, 5, self.img, color=(0, 128, 0))
+        self.img.draw_string(1,1, ("track color..."), color=(0,128,0),scale=1)
+        smart_camera_blobs_ret = self.img.find_blobs(self.threshold, area_threshold=self.area_threshold, merge=True)
         blobs = smart_camera_blobs_ret
         
         if blobs:
@@ -93,14 +89,19 @@ class Track(object):
             h = find_max(smart_camera_blobs_ret).h()
             pixels = find_max(smart_camera_blobs_ret).pixels()
             count = find_max(smart_camera_blobs_ret).count()
+            code = find_max(smart_camera_blobs_ret).code()
             self.lcd.display(self.img)
             gc.collect()
-            return x,y,cx,cy,w,h,pixels,count
+            return x,y,cx,cy,w,h,pixels,count,code
         else:
             del smart_camera_blobs_ret
             self.lcd.display(self.img)
             gc.collect()
-            return None,None,None,None,None,None,None,None
+            return None,None,None,None,None,None,None,None,None
+
+    def set_up(self,threshold, area_threshold):
+        self.threshold = threshold
+        self.area_threshold = area_threshold
 
     def __del__(self):
         del self.img

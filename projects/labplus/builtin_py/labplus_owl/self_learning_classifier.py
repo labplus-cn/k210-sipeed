@@ -144,7 +144,7 @@ class Self_learning_classifier(object):
         self.sensor.set_vflip(1)
     else:
         self.sensor.set_vflip(0)
-        self.sensor.set_hmirror(1)
+        self.sensor.set_hmirror(0)
     
     self.sensor.run(1)
-    time.sleep(1)
+    time.sleep(0.5)

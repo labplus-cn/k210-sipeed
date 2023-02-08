@@ -1,6 +1,4 @@
 import image
-# import sensor
-# import lcd
 import time
 from Maix import FPIOA, GPIO
 import gc
@@ -37,9 +35,10 @@ class Color(object):
         self.sensor.set_pixformat(self.sensor.RGB565)
         if(choice==1):
             self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
         else:
             self.sensor.set_vflip(0)
-        self.sensor.set_hmirror(1)
+        
         self.sensor.run(1)
         self.sensor.skip_frames(10)
 
@@ -159,9 +158,84 @@ class Color(object):
         time.sleep_ms(3)
 
 
+roi1 = (10,15,20,20)
+roi2 = (40,15,20,20)
+roi3 = (70,15,20,20)
+roi4 = (100,15,20,20)
+roi5 = (130,15,20,20)
+roi6 = (10,50,20,20)
+roi7 = (40,50,20,20)
+roi8 = (70,50,20,20)
+roi9 = (100,50,20,20)
+roi10 = (130,50,20,20)
+roi11 = (10,85,20,20)
+roi12 = (40,85,20,20)
+roi13 = (70,85,20,20)
+roi14 = (100,85,20,20)
+roi15 = (130,85,20,20)
 
-# t = color_recognization(1)
-# t.add_color(3)
+class Color_Statistics(object):
+    def __init__(self, lcd=None, sensor=None):
+        self.lcd = lcd
+        self.sensor = sensor
+        self.lcd.init(freq=15000000, invert=1)
+        self.clock = time.clock()
+        try:
+            background = image.Image('/flash/startup.jpg', copy_to_fb=True)
+            self.lcd.display(background)
+            del background
+        except:
+            self.lcd.clear(self.lcd.BLUE)
+            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "labplus AI Camera", self.lcd.WHITE, self.lcd.BLUE) 
+        self.img_binary1=200
+        self.img_binary2=255
+        self.line_binary1=230
+        self.line_binary2=255
+        time.sleep(0.2)
 
-# while True:
-#     print(t.recognize())
+    def recognize(self):
+        self.clock.tick()
+        self.img = self.sensor.snapshot()
+        self.img.binary([(self.img_binary1,self.img_binary2)])
+        _line = self.img.get_regression([(self.line_binary1,self.line_binary2)])
+        if(_line):
+            self.img.draw_line(_line.line(), color = 127)
+            # print(line.line(),line.rho(),line.x1(),line.y1(),line.x2(),line.y2(),line.length(),line.magnitude(),line.theta())
+        else:
+            _line = None
+        data1 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi1).mode()
+        data2 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi2).mode() 
+        data3 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi3).mode() 
+        data4 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi4).mode() 
+        data5 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi5).mode() 
+        data6 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi6).mode() 
+        data7 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi7).mode() 
+        data8 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi8).mode() 
+        data9 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi9).mode() 
+        data10 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi10).mode() 
+        data11 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi11).mode() 
+        data12 =  self.img.get_statistics(thresholds = [(230,255)] , roi = roi12).mode() 
+        data13 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi13).mode() 
+        data14 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi14).mode() 
+        data15 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi15).mode() 
+        fps=self.clock.fps()
+        self.img.draw_string(1,1, ("%2.1ffps:"%(fps)), color=(0,128,0),scale=1)
+        self.lcd.display(self.img)
+        gc.collect()
+        return data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line
+
+    def set_up_img_binary(self,binary1,binary2):
+        self.img_binary1 = binary1
+        self.img_binary2 = binary2
+
+    def set_up_line_binary(self,binary1,binary2):
+        self.line_binary1 = binary1
+        self.line_binary2 = binary2
+        # self.lcd.draw_string(5,20, '1:'+str(binary1), self.lcd.WHITE, self.lcd.BLUE)
+        # self.lcd.draw_string(5,40, '2:'+str(binary2), self.lcd.WHITE, self.lcd.BLUE)
+        # time.sleep(5)
+        
+    def __del__(self):
+        del self.img
+        del self.lcd
+        gc.collect()

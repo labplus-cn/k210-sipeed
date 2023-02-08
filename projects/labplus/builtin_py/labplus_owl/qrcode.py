@@ -20,7 +20,7 @@ class QRCode(object):
         self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
 
         self.change_camera(choice=choice)
-        time.sleep(3)
+        time.sleep(1)
         self.index = -1
         self.flag_add = 0
 
