@@ -81,29 +81,27 @@ class AICamera(object):
             self.flag_kpu_recognize=0
             #
             self.flag_track_recognize=0
-            self.flag_color_statistics_recognize = 0
+            self.flag_color_statistics_recognize=0
             
 
     def __init__(self):
         fm.register(32, fm.fpioa.UART2_TX, force=True)
         fm.register(33, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
-        self.uart.init(1152000, 8, None, 1, timeout=1000, read_buf_len=192)
+        # self.uart.init(1152000, 8, None, 1, timeout=1000, read_buf_len=256)
+        self.uart.init(1152000, 8, None, 1, read_buf_len=256)
         time.sleep(0.2)
         self.lcd = lcd
         self.kpu = kpu
+        self.sensor = sensor
         
         # RGB
-        self.rgb_led = ws2812(34,2)
-        try:
-            self.sensor = sensor
-        except:
-            self.lcd.clear(lcd.BLUE)
-            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "init sensor err!", lcd.WHITE, lcd.BLUE) 
-        
+        # self.rgb_led = ws2812(34,2)
+          
         self.lcd.init(freq=15000000, invert=1)
         try:
-            background = image.Image('/flash/startup.jpg', copy_to_fb=True)
+            # background = image.Image('/flash/startup.jpg', copy_to_fb=True)
+            background = image.Image("/flash/startup.jpg")
             self.lcd.display(background)
             del background
         except Exception as e:
@@ -112,10 +110,8 @@ class AICamera(object):
             # time.sleep(3)
             # lcd.clear((0, 0, 255))
             # lcd.draw_string(0,200, str(e), lcd.WHITE, lcd.BLUE)
-           
-        
-        # Camera
-        # self.change_camera(_choice=1)
+
+        self.change_camera(_choice=1)
 
         # Image
         # self.img = image.Image()
@@ -175,15 +171,16 @@ class AICamera(object):
         # lcd.draw_string(0,200, 'send:'+str(CMD_TEMP), lcd.WHITE, lcd.BLUE)
         self.uart.write(bytes(CMD_TEMP))
         self.uart.write(bytes([check_sum & 0xFF]))
+        lcd.draw_string(0,0, 'cmd_len:'+str(len(CMD_TEMP)+1), lcd.WHITE, lcd.BLUE)
         
-    def AI_Uart_CMD_String(self,cmd=0x00, cmd_type=0x00, cmd_data=[0, 0, 0], str_len=0, str_buf=''):
+    def AI_Uart_CMD_String(self,cmd=0x00, cmd_type=0x00, cmd_data=[0x00], str_len=0, str_buf=''):
         check_sum = 0
         CMD = [0xBB, 0xAA, 0x02, cmd, cmd_type]
         CMD.extend(cmd_data)
-        for i in range(3-len(cmd_data)):
+        for i in range(15-len(cmd_data)):
             CMD.append(0)
-        for i in range(len(CMD)):
-            check_sum = check_sum+CMD[i]
+        # for i in range(len(CMD)):
+        #     check_sum = check_sum+CMD[i]
         # print_x16(CMD)
         self.uart.write(bytes(CMD))
         str_temp = bytes(str_buf, 'utf-8')
@@ -191,9 +188,11 @@ class AICamera(object):
         self.uart.write(bytes([str_len]))
         self.uart.write(str_temp)
         # lcd.draw_string(0,50, 'str:'+str(str_temp), lcd.WHITE, lcd.BLUE)
-        for i in range(len(str_temp)):
-            check_sum = check_sum + str_temp[i]
-        self.uart.write(bytes([check_sum & 0xFF]))   
+        # for i in range(len(str_temp)):
+        #     check_sum = check_sum + str_temp[i]
+        # self.uart.write(bytes([check_sum & 0xFF]))   
+        self.uart.write(bytes([check_sum]))   
+        lcd.draw_string(0,0, 'str_len:'+str(len(str_temp)+19), lcd.WHITE, lcd.BLUE)
     
     def print_x16(self,date):
         for i in range(len(date)):
@@ -354,7 +353,6 @@ class AICamera(object):
                     else:
                         self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=30000000,_dual_buff=1)
                     self.color_statistics = Color_Statistics(lcd=self.lcd,sensor=self.sensor)  
-                              
                 elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x02 and self.color_statistics!=None ):
                     self.k210.flag_color_statistics_recognize = 1                               
                 elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x03):
@@ -439,7 +437,7 @@ class AICamera(object):
         num = 0
         while True:
             gc.collect()
-            time.sleep_ms(1)
+            time.sleep_ms(2)
             # num+=1
             # lcd.draw_string(200,0, 'listen:'+str(num), lcd.WHITE, lcd.BLUE)
             # lcd.draw_string(0,0, 'mode:'+str(self.k210.mode), lcd.WHITE, lcd.BLUE)
@@ -447,6 +445,18 @@ class AICamera(object):
             try:
                 if(self.k210.mode==DEFAULT_MODE):
                     pass
+                elif(self.k210.mode==COLOR_STATISTICS_MODE and self.color_statistics!=None):
+                    if(self.k210.flag_color_statistics_recognize):
+                        data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line= self.color_statistics.recognize()
+                        # _line=None
+                        if(_line==None):
+                            self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
+                        else:
+                            _cmd_data = [data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15]
+                            _str = str(_line[0])+','+str(_line[1])+','+str(_line[2])+','+str(_line[3])+','+str(_line[4])+','+str(_line[5])+','+str(_line[6])+','+str(_line[7])
+                            # _str=str(1)+'|'+str(2)+'|'+str(3)+'|'+str(4)+'|'+str(5)+'|'+str(6)+'|'+str(7)+'|'+str(8)+'|'+str(9)+'|'+str(10)+'|'+str(11)+'|'+str(12)+'|'+str(13)+'|'+str(14)+'|'+str(15)+'|'+str(16)+'|'+str(17)+'|'+str(18)+'|'+str(19)+'|'+str(20)+'|'+str(21)+'|'+str(22)+'|'+str(23)
+                            self.AI_Uart_CMD_String(cmd=0x0d,cmd_type=0x02,cmd_data=_cmd_data,str_buf=_str)
+                        self.k210.flag_color_statistics_recognize = 0
                 elif(self.k210.mode==MNIST_MODE):
                     if(self.k210.flag_mnist_recognize):
                         classid,value = self.mnist.recognize()
@@ -551,18 +561,10 @@ class AICamera(object):
                         if(x==None):
                             self.AI_Uart_CMD(0x01,0x0c,0x02,cmd_data=[0xff])
                         else:
-                            _str=str(x)+'|'+str(y)+'|'+str(cx)+'|'+str(cy)+'|'+str(w)+'|'+str(h)+'|'+str(pixels)+'|'+str(count)+'|'+str(code)
-                            self.AI_Uart_CMD_String(cmd=0x0c,cmd_type=0x02,str_buf=_str)
+                            _cmd_data = [code]
+                            _str=str(x)+'|'+str(y)+'|'+str(cx)+'|'+str(cy)+'|'+str(w)+'|'+str(h)+'|'+str(pixels)+'|'+str(count)
+                            self.AI_Uart_CMD_String(cmd=0x0c,cmd_type=0x02,cmd_data=_cmd_data,str_buf=_str)
                         self.k210.flag_track_recognize = 0
-                elif(self.k210.mode==COLOR_STATISTICS_MODE and self.color_statistics!=None):
-                    if(self.k210.flag_color_statistics_recognize):
-                        data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line= self.color_statistics.recognize()
-                        if(_line==None):
-                            self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
-                        else:
-                            _str=str(data1)+'|'+str(data2)+'|'+str(data3)+'|'+str(data4)+'|'+str(data5)+'|'+str(data6)+'|'+str(data7)+'|'+str(data8)+'|'+str(data9)+'|'+str(data10)+'|'+str(data11)+'|'+str(data12)+'|'+str(data13)+'|'+str(data14)+'|'+str(data15)+'|'+str(_line[0])+'|'+str(_line[1])+'|'+str(_line[2])+'|'+str(_line[3])+'|'+str(_line[4])+'|'+str(_line[5])+'|'+str(_line[6])+'|'+str(_line[7])
-                            self.AI_Uart_CMD_String(cmd=0x0d,cmd_type=0x02,str_buf=_str)
-                        self.k210.flag_color_statistics_recognize = 0
             except Exception as e:
                 lcd.draw_string(0,180, str(e), lcd.WHITE, lcd.BLUE)
 
@@ -611,9 +613,9 @@ class AICamera(object):
         # self.sensor.set_auto_whitebal(False)
         self.sensor.set_auto_gain(_gain)
         self.sensor.set_windowing((_w,_h))
-        self.sensor.skip_frames(20)
+        self.sensor.skip_frames(10)
         self.sensor.run(1)
-        time.sleep(0.5)
+        time.sleep(0.3)
     
 try:
     aiCamera=AICamera()

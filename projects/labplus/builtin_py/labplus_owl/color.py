@@ -222,6 +222,7 @@ class Color_Statistics(object):
         self.img.draw_string(1,1, ("%2.1ffps:"%(fps)), color=(0,128,0),scale=1)
         self.lcd.display(self.img)
         gc.collect()
+        # return 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,_line
         return data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line
 
     def set_up_img_binary(self,binary1,binary2):
