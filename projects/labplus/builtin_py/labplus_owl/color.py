@@ -174,19 +174,15 @@ roi13 = (74,86,10,10)
 roi14 = (102,86,10,10)
 roi15 = (130,86,10,10)
 
+roi_list = [roi1,roi2,roi3,roi4,roi5,roi6,roi7,roi8,roi9,roi10,roi11,roi12,roi13,roi14,roi15]
+
 class Color_Statistics(object):
     def __init__(self, lcd=None, sensor=None):
         self.lcd = lcd
         self.sensor = sensor
         self.lcd.init(freq=15000000, invert=1)
         self.clock = time.clock()
-        try:
-            background = image.Image('/flash/startup.jpg', copy_to_fb=True)
-            self.lcd.display(background)
-            del background
-        except:
-            self.lcd.clear(self.lcd.BLUE)
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "labplus AI Camera", self.lcd.WHITE, self.lcd.BLUE) 
+        self.img = None
         self.img_binary1=200
         self.img_binary2=255
         self.line_binary1=230
@@ -194,10 +190,13 @@ class Color_Statistics(object):
         time.sleep(0.2)
 
     def recognize(self):
-        self.clock.tick()
+        # self.clock.tick()
         self.img = self.sensor.snapshot()
         self.img.binary([(self.img_binary1,self.img_binary2)])
         _line = self.img.get_regression([(self.line_binary1,self.line_binary2)])
+        for i in range(len(roi_list)):
+            self.img.draw_rectangle(roi_list[i], color=(0, 128, 0), fill=False)
+
         if(_line):
             self.img.draw_line(_line.line(), color = 127)
             # print(line.line(),line.rho(),line.x1(),line.y1(),line.x2(),line.y2(),line.length(),line.magnitude(),line.theta())
@@ -218,8 +217,8 @@ class Color_Statistics(object):
         data13 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi13).mode() 
         data14 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi14).mode() 
         data15 = self.img.get_statistics(thresholds = [(230,255)] , roi = roi15).mode() 
-        fps=self.clock.fps()
-        self.img.draw_string(1,1, ("%2.1ffps:"%(fps)), color=(0,128,0),scale=1)
+        # fps=self.clock.fps()
+        # self.img.draw_string(1,1, ("%2.1ffps:"%(fps)), color=(0,128,0),scale=1)
         self.lcd.display(self.img)
         gc.collect()
         # return 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,_line
@@ -232,9 +231,43 @@ class Color_Statistics(object):
     def set_up_line_binary(self,binary1,binary2):
         self.line_binary1 = binary1
         self.line_binary2 = binary2
-        # self.lcd.draw_string(5,20, '1:'+str(binary1), self.lcd.WHITE, self.lcd.BLUE)
-        # self.lcd.draw_string(5,40, '2:'+str(binary2), self.lcd.WHITE, self.lcd.BLUE)
-        # time.sleep(5)
+        
+    def __del__(self):
+        del self.img
+        del self.lcd
+        gc.collect()
+
+
+class Color_Extractor(object):
+    Roi = (70,50,20,20)
+    def __init__(self, lcd=None, sensor=None):
+        self.lcd = lcd
+        self.sensor = sensor
+        # self.lcd.init(freq=15000000, invert=1)
+        self.img = None
+        self.img_binary1=200
+        self.img_binary2=255
+        self.line_binary1=230
+        self.line_binary2=255
+        # sensor.reset()
+        # sensor.set_pixformat(sensor.RGB565)
+        # sensor.set_framesize(sensor.QQVGA)
+        # sensor.set_auto_whitebal(False)
+        # sensor.set_vflip(1)
+        # sensor.run(1)
+        time.sleep(0.2)
+
+    def recognize(self):
+        self.img = sensor.snapshot()
+        self.statistics=self.img.get_statistics(roi=self.Roi)
+        self.color_l=self.statistics.l_mode()
+        self.color_a=self.statistics.a_mode()
+        self.color_b=self.statistics.b_mode()
+        self.img.draw_rectangle(self.Roi)
+        self.img.draw_string(2, 2,str([self.color_l,self.color_a,self.color_b]), color=(0,128,0), scale=2)
+        self.lcd.display(self.img)
+        return str(self.color_l),str(self.color_a),str(self.color_b)
+        gc.collect()
         
     def __del__(self):
         del self.img

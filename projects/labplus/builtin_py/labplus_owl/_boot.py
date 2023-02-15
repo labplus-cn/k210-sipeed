@@ -1,4 +1,5 @@
 import os, sys, time
+import lcd,image
 
 sys.path.append('')
 sys.path.append('.')
@@ -41,6 +42,7 @@ try:
     f.close()
 except Exception:
     is_debug = False
+
 
 from labplus import *
 

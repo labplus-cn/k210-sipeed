@@ -26,7 +26,7 @@ import gc
 from fpioa_manager import fm
 from display import Draw_CJK_String
 
-img = None
+
 blobs = None
 blob_num = None
 
@@ -37,7 +37,7 @@ class Track(object):
         self.lcd.init(freq=15000000, invert=1)
         self.threshold = threshold
         self.area_threshold = area_threshold
-
+        self.img = None
 
         # self.change_camera(choice=choice)
         
@@ -70,7 +70,6 @@ class Track(object):
 
     def recognize(self):
         self.img = self.sensor.snapshot()
-        # Draw_CJK_String('寻找色块...', 5, 5, self.img, color=(0, 128, 0))
         self.img.draw_string(1,1, ("track color..."), color=(0,128,0),scale=1)
         smart_camera_blobs_ret = self.img.find_blobs(self.threshold, area_threshold=self.area_threshold, merge=True)
         blobs = smart_camera_blobs_ret
@@ -79,7 +78,7 @@ class Track(object):
             blob_num = len(blobs)
             b_end = int(blob_num - 1)
             for b in (0 <= b_end) and upRange(0, b_end, 1) or downRange(0, b_end, 1):
-                self.img.draw_rectangle(smart_camera_blobs_ret[b].x(), smart_camera_blobs_ret[b].y(), smart_camera_blobs_ret[b].w(), smart_camera_blobs_ret[b].h(), color=(255, 0, 0), fill=False)
+                self.img.draw_rectangle(smart_camera_blobs_ret[b].x(), smart_camera_blobs_ret[b].y(), smart_camera_blobs_ret[b].w(), smart_camera_blobs_ret[b].h(), color=(0, 128, 0), fill=False)
             
             x = find_max(smart_camera_blobs_ret).x()
             y = find_max(smart_camera_blobs_ret).y()

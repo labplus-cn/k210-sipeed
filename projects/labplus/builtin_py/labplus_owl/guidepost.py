@@ -22,8 +22,6 @@ class Guidepost(object):
         a = self.lcd.display(img, oft=(40,0))
         if(pmax>0.75):
             self.lcd.draw_string(240, 0, "id:%s"%(self.labels[max_index].strip()), self.lcd.GREEN)
-            # self.lcd.draw_string(200, 0, "pmax:%.2f"%(pmax), self.lcd.GREEN)
-            # self.lcd.draw_string(200, 15, "id:%s"%(self.labels[max_index].strip()), self.lcd.GREEN)
             return max_index,int(round(pmax,2)*100)
         else:
             # self.lcd.draw_string(200, 0, "pmax:      ", self.lcd.GREEN)
@@ -40,13 +38,13 @@ class Guidepost(object):
             self.sensor.reset(choice=choice)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_hmirror(1)
             self.sensor.set_windowing((192, 192))
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         
         if(choice==1):
+            self.sensor.set_hmirror(1)
             self.sensor.set_vflip(1)
         else:
             self.sensor.set_vflip(0)

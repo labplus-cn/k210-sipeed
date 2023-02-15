@@ -47,6 +47,7 @@ GUIDEPOST_MODE = 10 #清华教材交通标志识别
 KPU_MODEL_MODE = 11 #自定义模型
 TRACK_MODE= 12 #色块识别
 COLOR_STATISTICS_MODE=13 # 颜色的统计信息
+COLOR_EXTRACTO_MODE=14 # LAB颜色提取器
 
 
 class AICamera(object):
@@ -82,6 +83,7 @@ class AICamera(object):
             #
             self.flag_track_recognize=0
             self.flag_color_statistics_recognize=0
+            self.flag_color_ex_recognize=0     
             
 
     def __init__(self):
@@ -89,7 +91,7 @@ class AICamera(object):
         fm.register(33, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
         # self.uart.init(1152000, 8, None, 1, timeout=1000, read_buf_len=256)
-        self.uart.init(1152000, 8, None, 1, read_buf_len=256)
+        self.uart.init(1152000, 8, None, 1, read_buf_len=128)
         time.sleep(0.2)
         self.lcd = lcd
         self.kpu = kpu
@@ -100,8 +102,8 @@ class AICamera(object):
           
         self.lcd.init(freq=15000000, invert=1)
         try:
-            # background = image.Image('/flash/startup.jpg', copy_to_fb=True)
-            background = image.Image("/flash/startup.jpg")
+            background = image.Image('/flash/startup.jpg', copy_to_fb=True)
+            # background = image.Image("/flash/startup.jpg")
             self.lcd.display(background)
             del background
         except Exception as e:
@@ -112,9 +114,6 @@ class AICamera(object):
             # lcd.draw_string(0,200, str(e), lcd.WHITE, lcd.BLUE)
 
         self.change_camera(_choice=1)
-
-        # Image
-        # self.img = image.Image()
 
         # button
         self.btn_A = button(16)
@@ -171,7 +170,7 @@ class AICamera(object):
         # lcd.draw_string(0,200, 'send:'+str(CMD_TEMP), lcd.WHITE, lcd.BLUE)
         self.uart.write(bytes(CMD_TEMP))
         self.uart.write(bytes([check_sum & 0xFF]))
-        lcd.draw_string(0,0, 'cmd_len:'+str(len(CMD_TEMP)+1), lcd.WHITE, lcd.BLUE)
+        # lcd.draw_string(0,0, 'cmd_len:'+str(len(CMD_TEMP)+1), lcd.WHITE, lcd.BLUE)
         
     def AI_Uart_CMD_String(self,cmd=0x00, cmd_type=0x00, cmd_data=[0x00], str_len=0, str_buf=''):
         check_sum = 0
@@ -276,7 +275,7 @@ class AICamera(object):
                     self.yolo_detect = YOLO_DETECT(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
                 elif(CMD[3]==OBJECT_RECOGNIZATION_MODE and CMD[4]==0x02):
                     self.k210.flag_yolo_recognize = 1
-                elif(CMD[3]==FACE_DETECTION_MODE and CMD[4]==0x01 and self.face_detect!=None):
+                elif(CMD[3]==FACE_DETECTION_MODE and CMD[4]==0x01):
                     self.k210.mode = FACE_DETECTION_MODE
                     self.face_detect = FACE_DETECT(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
                 elif(CMD[3]==FACE_DETECTION_MODE and CMD[4]==0x02):
@@ -351,14 +350,23 @@ class AICamera(object):
                     if(int(CMD[5])==1):
                         self.change_camera(_choice=1,_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_w=160,_h=120,_freq=30000000,_dual_buff=1)
                     else:
-                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=30000000,_dual_buff=1)
+                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=32000000,_dual_buff=True)
                     self.color_statistics = Color_Statistics(lcd=self.lcd,sensor=self.sensor)  
                 elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x02 and self.color_statistics!=None ):
                     self.k210.flag_color_statistics_recognize = 1                               
                 elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x03):
                     self.color_statistics.set_up_img_binary(int(CMD[5]),int(CMD[6]))             
                 elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x04):
-                    self.color_statistics.set_up_line_binary(int(CMD[5]),int(CMD[6]))                                                                               
+                    self.color_statistics.set_up_line_binary(int(CMD[5]),int(CMD[6]))       
+                elif(CMD[3]==COLOR_EXTRACTO_MODE and CMD[4]==0x01):
+                    self.k210.mode = COLOR_EXTRACTO_MODE
+                    if(int(CMD[5])==1):
+                        self.change_camera(_choice=1,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_w=160,_h=120,_freq=30000000,_dual_buff=True,_whitebal=False)
+                    else:
+                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=30000000,_dual_buff=True,_whitebal=False)
+                    self.color_ex = Color_Extractor(lcd=self.lcd,sensor=self.sensor)  
+                elif(CMD[3]==COLOR_EXTRACTO_MODE and CMD[4]==0x02 and self.color_ex!=None ):
+                    self.k210.flag_color_ex_recognize = 1                                                                              
             elif(CMD[2]==0x02):
                 if(CMD[3]==SPEECH_RECOGNIZATION_MODE and CMD[4]==0x02):
                     _config ={}
@@ -437,7 +445,7 @@ class AICamera(object):
         num = 0
         while True:
             gc.collect()
-            time.sleep_ms(2)
+            time.sleep_ms(1)
             # num+=1
             # lcd.draw_string(200,0, 'listen:'+str(num), lcd.WHITE, lcd.BLUE)
             # lcd.draw_string(0,0, 'mode:'+str(self.k210.mode), lcd.WHITE, lcd.BLUE)
@@ -448,13 +456,11 @@ class AICamera(object):
                 elif(self.k210.mode==COLOR_STATISTICS_MODE and self.color_statistics!=None):
                     if(self.k210.flag_color_statistics_recognize):
                         data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line= self.color_statistics.recognize()
-                        # _line=None
                         if(_line==None):
                             self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
                         else:
                             _cmd_data = [data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15]
                             _str = str(_line[0])+','+str(_line[1])+','+str(_line[2])+','+str(_line[3])+','+str(_line[4])+','+str(_line[5])+','+str(_line[6])+','+str(_line[7])
-                            # _str=str(1)+'|'+str(2)+'|'+str(3)+'|'+str(4)+'|'+str(5)+'|'+str(6)+'|'+str(7)+'|'+str(8)+'|'+str(9)+'|'+str(10)+'|'+str(11)+'|'+str(12)+'|'+str(13)+'|'+str(14)+'|'+str(15)+'|'+str(16)+'|'+str(17)+'|'+str(18)+'|'+str(19)+'|'+str(20)+'|'+str(21)+'|'+str(22)+'|'+str(23)
                             self.AI_Uart_CMD_String(cmd=0x0d,cmd_type=0x02,cmd_data=_cmd_data,str_buf=_str)
                         self.k210.flag_color_statistics_recognize = 0
                 elif(self.k210.mode==MNIST_MODE):
