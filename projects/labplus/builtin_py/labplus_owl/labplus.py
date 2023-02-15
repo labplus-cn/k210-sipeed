@@ -90,7 +90,6 @@ class AICamera(object):
         fm.register(32, fm.fpioa.UART2_TX, force=True)
         fm.register(33, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
-        # self.uart.init(1152000, 8, None, 1, timeout=1000, read_buf_len=256)
         self.uart.init(1152000, 8, None, 1, read_buf_len=128)
         time.sleep(0.2)
         self.lcd = lcd
@@ -191,7 +190,7 @@ class AICamera(object):
         #     check_sum = check_sum + str_temp[i]
         # self.uart.write(bytes([check_sum & 0xFF]))   
         self.uart.write(bytes([check_sum]))   
-        lcd.draw_string(0,0, 'str_len:'+str(len(str_temp)+19), lcd.WHITE, lcd.BLUE)
+        # lcd.draw_string(0,0, 'str_len:'+str(len(str_temp)+19), lcd.WHITE, lcd.BLUE)
     
     def print_x16(self,date):
         for i in range(len(date)):
@@ -363,7 +362,7 @@ class AICamera(object):
                     if(int(CMD[5])==1):
                         self.change_camera(_choice=1,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_w=160,_h=120,_freq=30000000,_dual_buff=True,_whitebal=False)
                     else:
-                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=30000000,_dual_buff=True,_whitebal=False)
+                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=30000000,_dual_buff=True,_brightness=-1,_whitebal=False)
                     self.color_ex = Color_Extractor(lcd=self.lcd,sensor=self.sensor)  
                 elif(CMD[3]==COLOR_EXTRACTO_MODE and CMD[4]==0x02 and self.color_ex!=None ):
                     self.k210.flag_color_ex_recognize = 1                                                                              
@@ -399,13 +398,7 @@ class AICamera(object):
                     for i in range(int(CMD[5])):
                         _data = [int(data[6*i]),int(data[6*i+1]),int(data[6*i+2]),int(data[6*i+3]),int(data[6*i+4]),int(data[6*i+5])]
                         _list.append(_data)
-
-                    # self.lcd.draw_string(0,115, 'l:'+str(data[-1]), lcd.WHITE, lcd.BLUE)
-                    # self.lcd.draw_string(0,135, 'l:'+str(_list[1]), lcd.WHITE, lcd.BLUE)
-                    # time.sleep(5)
                     self.track.set_up(_list,int(data[-1]))
-                   
-                    
                 elif(CMD[3]==0x64 and CMD[4]==0x01):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
@@ -571,6 +564,15 @@ class AICamera(object):
                             _str=str(x)+'|'+str(y)+'|'+str(cx)+'|'+str(cy)+'|'+str(w)+'|'+str(h)+'|'+str(pixels)+'|'+str(count)
                             self.AI_Uart_CMD_String(cmd=0x0c,cmd_type=0x02,cmd_data=_cmd_data,str_buf=_str)
                         self.k210.flag_track_recognize = 0
+                elif(self.k210.mode==COLOR_EXTRACTO_MODE and self.color_ex!=None):
+                    if(self.k210.flag_color_ex_recognize):
+                        color_l,color_a,color_b= self.color_ex.recognize()
+                        if(color_l==None):
+                            self.AI_Uart_CMD(0x01,0x0e,0x02,cmd_data=[0xff])
+                        else:
+                            _str=color_l+'|'+color_a+'|'+color_b
+                            self.AI_Uart_CMD_String(cmd=0x0e,cmd_type=0x02,str_buf=_str)
+                        self.k210.flag_color_ex_recognize=0
             except Exception as e:
                 lcd.draw_string(0,180, str(e), lcd.WHITE, lcd.BLUE)
 

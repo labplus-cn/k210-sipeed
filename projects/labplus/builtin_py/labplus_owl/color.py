@@ -245,29 +245,28 @@ class Color_Extractor(object):
         self.sensor = sensor
         # self.lcd.init(freq=15000000, invert=1)
         self.img = None
-        self.img_binary1=200
-        self.img_binary2=255
-        self.line_binary1=230
-        self.line_binary2=255
-        # sensor.reset()
-        # sensor.set_pixformat(sensor.RGB565)
-        # sensor.set_framesize(sensor.QQVGA)
-        # sensor.set_auto_whitebal(False)
-        # sensor.set_vflip(1)
-        # sensor.run(1)
+        self.color_l=None
+        self.color_a=None
+        self.color_b=None
         time.sleep(0.2)
 
     def recognize(self):
-        self.img = sensor.snapshot()
-        self.statistics=self.img.get_statistics(roi=self.Roi)
-        self.color_l=self.statistics.l_mode()
-        self.color_a=self.statistics.a_mode()
-        self.color_b=self.statistics.b_mode()
-        self.img.draw_rectangle(self.Roi)
-        self.img.draw_string(2, 2,str([self.color_l,self.color_a,self.color_b]), color=(0,128,0), scale=2)
-        self.lcd.display(self.img)
-        return str(self.color_l),str(self.color_a),str(self.color_b)
-        gc.collect()
+        try:
+            self.img = self.sensor.snapshot()
+            self.statistics=self.img.get_statistics(roi=self.Roi)
+            self.color_l=self.statistics.l_mode()
+            self.color_a=self.statistics.a_mode()
+            self.color_b=self.statistics.b_mode()
+            self.img.draw_rectangle(self.Roi)
+            self.img.draw_string(2, 2,str([self.color_l,self.color_a,self.color_b]), color=(0,128,0), scale=2)
+            self.lcd.display(self.img)
+            return str(self.color_l),str(self.color_a),str(self.color_b)
+            gc.collect()
+        except Exception as e:
+            self.color_l=None
+            self.color_a=None
+            self.color_b=None
+            return self.color_l,self.color_a,self.color_b
         
     def __del__(self):
         del self.img
