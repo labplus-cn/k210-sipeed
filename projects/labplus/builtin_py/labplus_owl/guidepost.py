@@ -32,6 +32,7 @@ class Guidepost(object):
         a = self.kpu.deinit(self.task)
         del self.task
         gc.collect()
+        # time.sleep(1)
 
     def change_camera(self, choice):
         try:
@@ -43,9 +44,12 @@ class Guidepost(object):
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         
-        if(choice==1):
-            self.sensor.set_hmirror(1)
+        if(choice==1 and self.sensor.get_id()==0x2642):
             self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
+        elif(choice==1 and self.sensor.get_id()==0x5640):
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
         else:
             self.sensor.set_vflip(0)
             self.sensor.set_hmirror(0)

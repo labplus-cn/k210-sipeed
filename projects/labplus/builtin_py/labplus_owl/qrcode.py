@@ -1,6 +1,4 @@
 import image
-# import sensor
-# import lcd
 import time
 from Maix import FPIOA, GPIO
 import gc
@@ -91,10 +89,12 @@ class QRCode(object):
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         self.sensor.set_framesize(self.sensor.QVGA)
         self.sensor.set_pixformat(self.sensor.RGB565)
-        # self.sensor.set_vflip(1)
-        self.sensor.set_hmirror(1)
-        if(choice==1):
+        if(choice==1 and self.sensor.get_id()==0x2642):
             self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
+        elif(choice==1 and self.sensor.get_id()==0x5640):
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
         else:
             self.sensor.set_brightness((-1))
             self.sensor.set_hmirror(0)
@@ -137,3 +137,52 @@ class QRCode(object):
         with open("/flash/_qrcode_record.txt", "w") as f:
             f.close()
         time.sleep_ms(3)
+
+class Apriltag(object):
+    def __init__(self, lcd=None, sensor=None):
+        self.lcd = lcd
+        self.sensor = sensor
+        #不可修改
+        self.sensor.set_auto_gain(False)
+        self.sensor.set_auto_whitebal(False)
+        if(self.sensor.get_id()==0x2642):
+            self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
+        elif(self.sensor.get_id()==0x5640):
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
+
+        self.img = None
+        self.tag_args = (None,None)
+        self.tag_families = image.TAG36H11
+        self.tag_families |= 0
+        time.sleep(0.1)
+
+    def set_families(self,user_tag_families):
+        self.tag_families |= user_tag_families
+
+    def recognize(self):
+        gc.collect()
+        try:
+            self.img = self.sensor.snapshot()
+            _tag_list = self.img.find_apriltags(families=self.tag_families)
+            if(len(_tag_list)):
+                for tag in _tag_list:
+                    self.img.draw_rectangle(tag.rect(), color = (255, 0, 0))
+                    # self.img.draw_cross(tag.cx(), tag.cy(), color = (0, 255, 0))
+                    self.img.draw_string(tag.x(),tag.y()-20,"id:%s"%tag.id(), color=(0,128,0), scale=2)
+                    self.tag_args = (tag.family(), tag.id())
+                    # print(tag_args)
+                    self.lcd.display(self.img)
+                    return str(self.tag_args[0]),str(self.tag_args[1])
+            else:
+                self.lcd.display(self.img)
+                return (None,None)
+        except Exception as e:
+            return (None,None)
+        
+    def __del__(self):
+        del self.img
+        del self.lcd
+        gc.collect()
+        

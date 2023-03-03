@@ -33,9 +33,12 @@ class Color(object):
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         self.sensor.set_framesize(self.sensor.QVGA)
         self.sensor.set_pixformat(self.sensor.RGB565)
-        if(choice==1):
+        if(choice==1 and  self.sensor.get_id()==0x2642):
             self.sensor.set_vflip(1)
             self.sensor.set_hmirror(1)
+        elif(choice==1 and self.sensor.get_id()==0x5640):
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
         else:
             self.sensor.set_vflip(0)
         
@@ -187,6 +190,12 @@ class Color_Statistics(object):
         self.img_binary2=255
         self.line_binary1=230
         self.line_binary2=255
+        if(self.sensor.get_id()==0x2642):
+            self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
+        elif(self.sensor.get_id()==0x5640):
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
         time.sleep(0.2)
 
     def recognize(self):
@@ -243,6 +252,12 @@ class Color_Extractor(object):
     def __init__(self, lcd=None, sensor=None):
         self.lcd = lcd
         self.sensor = sensor
+        if(self.sensor.get_id()==0x2642):
+            self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
+        elif(self.sensor.get_id()==0x5640):
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
         # self.lcd.init(freq=15000000, invert=1)
         self.img = None
         self.color_l=None
@@ -272,3 +287,4 @@ class Color_Extractor(object):
         del self.img
         del self.lcd
         gc.collect()
+        

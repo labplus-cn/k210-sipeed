@@ -140,11 +140,15 @@ class Self_learning_classifier(object):
     self.sensor.set_framesize(self.sensor.QVGA)
     self.sensor.set_pixformat(self.sensor.RGB565)
     self.sensor.set_hmirror(1)
-    if(choice==1):
-        self.sensor.set_vflip(1)
+    if(choice==1 and self.sensor.get_id()==0x2642):
+      self.sensor.set_vflip(1)
+      self.sensor.set_hmirror(1)
+    elif(choice==1 and self.sensor.get_id()==0x5640):
+      self.sensor.set_vflip(0)
+      self.sensor.set_hmirror(0)
     else:
-        self.sensor.set_vflip(0)
-        self.sensor.set_hmirror(0)
+      self.sensor.set_vflip(0)
+      self.sensor.set_hmirror(0)
     
     self.sensor.run(1)
     time.sleep(0.5)

@@ -26,7 +26,7 @@ class YOLO_DETECT(object):
                 a = self.lcd.display(img)
                 for i in code:
                     self.lcd.draw_string(i.x(), i.y(), self.classes[i.classid()], self.lcd.GREEN, self.lcd.WHITE)
-                    # self.lcd.draw_string(i.x(), i.y()+12, '%d'%int(i.value()*100), self.lcd.GREEN , self.lcd.WHITE)
+                    # self.lcd.draw_string(5,5,'num:'+str(i.objnum()), self.lcd.GREEN , self.lcd.WHITE)
             return code[0].classid(),int(round(code[0].value(),2)*100)
         else:
             a = self.lcd.display(img)
@@ -47,8 +47,12 @@ class YOLO_DETECT(object):
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         
-        if(choice==1):
+        if(choice==1 and self.sensor.get_id()==0x2642):
             self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
+        elif(choice==1 and self.sensor.get_id()==0x5640):
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
         else:
             self.sensor.set_vflip(0)
             self.sensor.set_hmirror(0)

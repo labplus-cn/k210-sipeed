@@ -48,6 +48,7 @@ KPU_MODEL_MODE = 11 #自定义模型
 TRACK_MODE= 12 #色块识别
 COLOR_STATISTICS_MODE=13 # 颜色的统计信息
 COLOR_EXTRACTO_MODE=14 # LAB颜色提取器
+APRILTAG_MODE=0x0f
 
 
 class AICamera(object):
@@ -84,6 +85,8 @@ class AICamera(object):
             self.flag_track_recognize=0
             self.flag_color_statistics_recognize=0
             self.flag_color_ex_recognize=0     
+            #
+            self.flag_apriltag_recognize=0
             
 
     def __init__(self):
@@ -130,6 +133,8 @@ class AICamera(object):
         self.guidepost = None
         self.track = None
         self.color_statistics=None
+        self.color_ex=None
+        self.apriltag=None
 
         #sensor config
         self._choice=1
@@ -365,7 +370,18 @@ class AICamera(object):
                         self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=30000000,_dual_buff=True,_brightness=-1,_whitebal=False)
                     self.color_ex = Color_Extractor(lcd=self.lcd,sensor=self.sensor)  
                 elif(CMD[3]==COLOR_EXTRACTO_MODE and CMD[4]==0x02 and self.color_ex!=None ):
-                    self.k210.flag_color_ex_recognize = 1                                                                              
+                    self.k210.flag_color_ex_recognize = 1                  
+                elif(CMD[3]==APRILTAG_MODE and CMD[4]==0x01):
+                    self.k210.mode = APRILTAG_MODE
+                    if(int(CMD[5])==1):
+                        self.change_camera(_choice=1,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_w=160,_h=120,_freq=30000000,_dual_buff=True,_whitebal=False)
+                    else:
+                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=30000000,_dual_buff=True,_whitebal=False)
+                    self.apriltag = Apriltag(lcd=self.lcd,sensor=self.sensor)  
+                elif(CMD[3]==APRILTAG_MODE and CMD[4]==0x02 and self.apriltag!=None ):
+                    self.k210.flag_apriltag_recognize = 1                  
+                elif(CMD[3]==APRILTAG_MODE and CMD[4]==0x03):
+                    self.apriltag.set_families(int(CMD[5]))                                            
             elif(CMD[2]==0x02):
                 if(CMD[3]==SPEECH_RECOGNIZATION_MODE and CMD[4]==0x02):
                     _config ={}
@@ -408,7 +424,7 @@ class AICamera(object):
                         self._framesize=sensor.QVGA
                     elif(int(data[0])==2):
                         self._framesize=sensor.QQVGA
-                        self.lcd.draw_string(0,215, 'QQVGA', lcd.WHITE, lcd.BLUE)
+                        # self.lcd.draw_string(0,215, 'QQVGA', lcd.WHITE, lcd.BLUE)
                     elif(int(data[0])==3):
                         self._framesize=sensor.QQQVGA
                     elif(int(data[0])==4):
@@ -573,8 +589,20 @@ class AICamera(object):
                             _str=color_l+'|'+color_a+'|'+color_b
                             self.AI_Uart_CMD_String(cmd=0x0e,cmd_type=0x02,str_buf=_str)
                         self.k210.flag_color_ex_recognize=0
+                elif(self.k210.mode==APRILTAG_MODE and self.apriltag!=None):
+                    if(self.k210.flag_apriltag_recognize):
+                        tag_family,tag_id = self.apriltag.recognize()
+                        if(tag_family==None or tag_id==None):
+                            self.AI_Uart_CMD(0x01,0x0f,0x02,cmd_data=[0xff])
+                        else:
+                            _str=tag_family+'|'+tag_id
+                            self.AI_Uart_CMD_String(cmd=0x0f,cmd_type=0x02,str_buf=_str)
+                        self.k210.flag_apriltag_recognize=0
             except Exception as e:
-                lcd.draw_string(0,180, str(e), lcd.WHITE, lcd.BLUE)
+                s=str(e)
+                lcd.draw_string(0,180, s, lcd.WHITE, lcd.BLUE)
+                if(len(s)>20):
+                    lcd.draw_string(0,220, s[20:-1], lcd.WHITE, lcd.BLUE)
 
     def reset(self):
         self.AI_Uart_CMD(0x01,0x01,0xFF)
@@ -585,21 +613,33 @@ class AICamera(object):
         if(self.k210.mode==GUIDEPOST_MODE):
             self.guidepost.__del__()
             del self.guidepost
+            self.guidepost=None
         elif(self.k210.mode==TRACK_MODE):
             self.track.__del__()
+            # self.k210.mode = DEFAULT_MODE
             del self.track
+            self.track=None
         elif(self.k210.mode==COLOR_STATISTICS_MODE):
             self.color_statistics.__del__()
+            # self.k210.mode = DEFAULT_MODE
             del self.color_statistics
+            self.color_statistics=None
+        elif(self.k210.mode==APRILTAG_MODE):
+            self.apriltag.__del__()
+            # self.k210.mode = DEFAULT_MODE
+            del self.apriltag
+            self.apriltag=None
         
+        self.k210.mode = DEFAULT_MODE
+
+        time.sleep(0.1)
         _cmd = self.uart.read()
         del _cmd
         gc.collect()
-
-        time.sleep(0.3)
+        time.sleep(0.1)
         self.AI_Uart_CMD(0x01,0x01,0xFE)
         time.sleep(0.1)
-        self.k210.mode = DEFAULT_MODE
+        
         self.lcd.draw_string(0,220, 'sw mode', lcd.WHITE, lcd.BLUE)
         gc.collect()
 
@@ -629,4 +669,7 @@ try:
     aiCamera=AICamera()
 except Exception as e:
     lcd.clear((0, 0, 255))
-    lcd.draw_string(0,200, str(e), lcd.WHITE, lcd.BLUE)
+    s=str(e)
+    lcd.draw_string(0,200, s, lcd.WHITE, lcd.BLUE)
+    if(len(s)>20):
+        lcd.draw_string(0,220, s[20:-1], lcd.WHITE, lcd.BLUE)
