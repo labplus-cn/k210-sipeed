@@ -58,17 +58,20 @@ class  speech_recognize(object):
     self.tim.start()
     self.lcd = lcd
     self.image = image.Image()
+    time.sleep(0.2)
     
   def config(self, sets):
     for key in sets:
       self.sets_key_threshold[key] = sets[key][0]
       self.sets_key_id[key] = sets[key][1]
     self.t.config(self.sets_key_threshold)
+    time.sleep(0.1)
 
   def recognize(self):
-    Draw_CJK_String('语音识别中...', 120, 120, self.image, color=(0, 255, 0))
+    Draw_CJK_String('语音识别中...', 120, 120, self.image, color=(0, 200, 0))
     self.lcd.display(self.image)
     tmp = self.t.recognize()
+    # self.lcd.draw_string(0,20, 'tmp:'+str(tmp), lcd.WHITE, lcd.BLUE)
     if isinstance(tmp, dict):
       # print(tmp)
       for key in tmp:
