@@ -48,7 +48,7 @@ KPU_MODEL_MODE = 11 #自定义模型
 TRACK_MODE= 12 #色块识别
 COLOR_STATISTICS_MODE=13 # 颜色的统计信息
 COLOR_EXTRACTO_MODE=14 # LAB颜色提取器
-APRILTAG_MODE=0x0f
+APRILTAG_MODE=15
 
 
 class AICamera(object):
@@ -128,6 +128,7 @@ class AICamera(object):
         self.asr = None
         self.yolo_detect = None
         self.face_detect = None
+        self.fac= None
         self.color = None
         self.mnist = None
         self.guidepost = None
@@ -135,6 +136,8 @@ class AICamera(object):
         self.color_statistics=None
         self.color_ex=None
         self.apriltag=None
+        self.kpu_model=None
+        self.qrcode = None
 
         #sensor config
         self._choice=1

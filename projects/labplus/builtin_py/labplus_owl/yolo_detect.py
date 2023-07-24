@@ -27,6 +27,8 @@ class YOLO_DETECT(object):
                 for i in code:
                     self.lcd.draw_string(i.x(), i.y(), self.classes[i.classid()], self.lcd.GREEN, self.lcd.WHITE)
                     # self.lcd.draw_string(5,5,'num:'+str(i.objnum()), self.lcd.GREEN , self.lcd.WHITE)
+                    print(i.classid())
+                print('=====')
             return code[0].classid(),int(round(code[0].value(),2)*100)
         else:
             a = self.lcd.display(img)

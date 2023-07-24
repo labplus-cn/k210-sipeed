@@ -121,6 +121,7 @@ class Self_learning_classifier(object):
 
   def save_classifier(self, name="classes.classifier"):
     self.classifier.save(name)
+    Draw_CJK_String('保存模型', 160, 100, img, color=(0, 255, 0))
 
   def load_classifier(self, name="classes.classifier"):
     try:
