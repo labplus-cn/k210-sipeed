@@ -1,6 +1,3 @@
-# import KPU as kpu
-# import sensor
-# import lcd
 from Maix import GPIO
 from fpioa_manager import fm
 import time
@@ -8,11 +5,11 @@ import gc
 from display import Draw_CJK_String
 
 class Self_learning_classifier(object):
-  def __init__(self, choice=1, kpu=None, lcd=None, sensor=None, class_num=1, sample_num=15):
+  def __init__(self, choice=1, kpu=None, lcd=None, sensor=None, class_num=1, sample_num=5):
     self.model_addr = 0x850000
     self.class_num = class_num
     self.sample_num = sample_num
-    self.threshold = 9
+    self.threshold = 6
     self.sensor = sensor
     self.kpu = kpu
     self.lcd = lcd
@@ -106,17 +103,19 @@ class Self_learning_classifier(object):
     except Exception as e:
         print("predict err:", e)
         return res_index,min_dist
-    if res_index >= 0 and min_dist < self.threshold :
+    if res_index >= 0 and min_dist <= self.threshold :
         # print("predict result:", class_names[res_index])
         # img = img.draw_string(0, 0, "predict,index:{0} min_dist:{1}".format(res_index, min_dist), color=(0,255,0),scale=1)
-        if(min_dist<=6):
+        if(min_dist <= self.threshold):
           Draw_CJK_String('识别到id:{0}'.format(res_index), 5, 20, img, color=(0, 255, 0))
         self.lcd.display(img)
         return res_index,min_dist
     else:
         # print("unknown, maybe:", class_names[res_index])
+        Draw_CJK_String('未识别到', 5, 20, img, color=(0, 255, 0))
         self.lcd.display(img)
-        return res_index,min_dist
+        # return res_index,min_dist
+        return None,None
 
   def save_classifier(self, name="classes.classifier"):
     self.classifier.save(name)
