@@ -529,13 +529,11 @@ class AICamera(object):
                     if(self.k210.flag_yolo_recognize):
                         time.sleep_ms(10)
                         tmp = self.yolo_detect.recognize()
-                        if(tmp==None):
-                            self.AI_Uart_CMD(0x01,0x03,0x02,cmd_data=[0xff])
-                        elif(tmp[0]==None):
+                        if(tmp==None or tmp[0]==None):
                             self.AI_Uart_CMD(0x01,0x03,0x02,cmd_data=[0xff])
                         else:
-                            classid,value = tmp
-                            self.AI_Uart_CMD(0x01,0x03,0x02,cmd_data=[classid,value])
+                            classid,value,objnum = tmp
+                            self.AI_Uart_CMD(0x01,0x03,0x02,cmd_data=[classid,value,objnum])
                         # self.k210.flag_yolo_recognize = 0
                 elif(self.k210.mode==FACE_DETECTION_MODE):
                     if(self.k210.flag_face_detection):

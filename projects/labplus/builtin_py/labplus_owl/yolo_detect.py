@@ -19,20 +19,18 @@ class YOLO_DETECT(object):
         self.clock.tick()
         img = self.sensor.snapshot()
         code = self.kpu.run_yolo2(self.task, img)
-        # print(self.clock.fps())
         if code:
             for i in code:
                 a=img.draw_rectangle(i.rect(), color=(0,255,0), thickness=2)
                 a=self.lcd.display(img)
-                for i in code:
-                    self.lcd.draw_string(i.x(), i.y(), self.classes[i.classid()], self.lcd.GREEN, self.lcd.WHITE)
-                    # self.lcd.draw_string(5,5,'num:'+str(i.objnum()), self.lcd.GREEN , self.lcd.WHITE)
-                    print(i.classid())
-                print('=====')
-            return code[0].classid(),int(round(code[0].value(),2)*100)
+                self.lcd.draw_string(i.x(), i.y(), self.classes[i.classid()], self.lcd.GREEN, self.lcd.WHITE)
+                # self.lcd.draw_string(5,5,'num:'+str(i.objnum()), self.lcd.GREEN , self.lcd.WHITE)
+                # print(i.classid())
+            return code[0].classid(),int(round(code[0].value(),2)*100),code[0].objnum()
+            # return code[0].classid(),int(round(code[0].value(),2)*100)
         else:
             a = self.lcd.display(img)
-            return None,None
+            return None,None,None
 
     def __del__(self):
         a = self.kpu.deinit(self.task)

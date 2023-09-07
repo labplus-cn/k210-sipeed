@@ -12,8 +12,7 @@ class Self_learning_classifier(object):
     self.model_addr = 0x850000
     self.class_num = class_num
     self.sample_num = sample_num
-    self.threshold = 11
-    # self.class_names = class_names
+    self.threshold = 9
     self.sensor = sensor
     self.kpu = kpu
     self.lcd = lcd
