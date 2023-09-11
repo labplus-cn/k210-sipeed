@@ -67,6 +67,7 @@ class AICamera(object):
             self.flag_slc_recognize = 0
             self.flag_slc_add = 0
             self.slc_mode_name = ''
+            self.slc_lode_mode_name = ''
             self.flag_slc_mode_save = 0
             self.flag_slc_mode_load = 0
             #
@@ -429,7 +430,7 @@ class AICamera(object):
                 elif(CMD[3]==SELF_LEARNING_CLASSIFIER_MODE and CMD[4]==0x05):
                     str_temp = bytes(CMD[9:-1])
                     mode_name = str(str_temp.decode('UTF-8','ignore'))
-                    self.k210.slc_mode_name = mode_name
+                    self.k210.slc_lode_mode_name = mode_name
                     self.k210.flag_slc_mode_load = 1
                 elif(CMD[3]==KPU_MODEL_MODE and CMD[4]==0x02):
                     str_temp = bytes(CMD[9:-1])
@@ -566,8 +567,9 @@ class AICamera(object):
                 elif(self.k210.mode==SELF_LEARNING_CLASSIFIER_MODE):
                     if(self.k210.flag_slc_mode_load):
                         if(self.slc!=None):
-                            self.slc.load_classifier(self.k210.slc_mode_name)
-                            self.k210.flag_slc_mode_load = 0
+                            if(self.slc.flag_add_class==0 and self.slc.flag_add_sample==0 and self.slc.flag_train==0 and self.k210.flag_slc_mode_save == 0):
+                                self.slc.load_classifier(self.k210.slc_lode_mode_name)
+                                self.k210.flag_slc_mode_load = 0
                     if(self.slc.flag_add_class):
                         self.slc.add_class_img()
                     elif(self.slc.flag_add_sample):

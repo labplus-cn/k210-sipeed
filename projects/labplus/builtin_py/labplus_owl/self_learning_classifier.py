@@ -2,6 +2,7 @@ from Maix import GPIO
 from fpioa_manager import fm
 import time
 import gc
+import os
 from display import Draw_CJK_String
 
 class Self_learning_classifier(object):
@@ -31,6 +32,7 @@ class Self_learning_classifier(object):
     self.flag_add_class = 0
     self.flag_add_sample = 0
     self.flag_train = 0
+    self.flag_save = 0
     self.class_img_num = 0
     self.sample_img_num = 0
     
@@ -86,10 +88,7 @@ class Self_learning_classifier(object):
 
   # train
   def train(self):
-    # print("start train")
-    # self.flag_train=1
     self.classifier.train()
-    # time.sleep_ms(100)
     self.flag_train=0
 
   def predict(self):
@@ -99,36 +98,51 @@ class Self_learning_classifier(object):
     min_dist = None
     try:
         res_index, min_dist = self.classifier.predict(img)
-        # print("{:.2f}".format(min_dist))
     except Exception as e:
         print("predict err:", e)
         return res_index,min_dist
     if res_index >= 0 and min_dist <= self.threshold :
-        # print("predict result:", class_names[res_index])
-        # img = img.draw_string(0, 0, "predict,index:{0} min_dist:{1}".format(res_index, min_dist), color=(0,255,0),scale=1)
-        if(min_dist <= self.threshold):
-          Draw_CJK_String('识别到id:{0}'.format(res_index), 5, 20, img, color=(0, 255, 0))
+        
+      if(min_dist <= self.threshold):
+        Draw_CJK_String('识别到id:{0}'.format(res_index), 5, 20, img, color=(0, 255, 0))
         self.lcd.display(img)
         return res_index,min_dist
     else:
-        # print("unknown, maybe:", class_names[res_index])
         Draw_CJK_String('未识别到', 5, 20, img, color=(0, 255, 0))
         self.lcd.display(img)
-        # return res_index,min_dist
         return None,None
 
   def save_classifier(self, name="classes.classifier"):
     self.classifier.save(name)
-    Draw_CJK_String('保存模型', 160, 100, img, color=(0, 255, 0))
+    img = self.sensor.snapshot()
+    Draw_CJK_String('保存模型成功', 5, 35, img, color=(0, 200, 0))
+    self.lcd.display(img)
+    time.sleep_ms(1500)
+    # self.flag_save = 0
 
   def load_classifier(self, name="classes.classifier"):
-    try:
-      del self.classifier
-    except:
-      print("del model fail")
-    gc.collect()
-    self.classifier, self.class_num, self.sample_num = self.kpu.classifier.load(self.model, name)
-    # print(self.class_num)
+    file_exit = False
+    for v in os.listdir('/flash'):
+      if name == '/flash/'+v:
+        file_exit = True
+    
+    if file_exit:
+      try:
+        del self.classifier
+      except:
+        print("del model fail")
+      gc.collect()
+      self.classifier, self.class_num, self.sample_num = self.kpu.classifier.load(self.model, name)
+      self.img = self.sensor.snapshot()
+      Draw_CJK_String('载入已保存模型', 5, 35, self.img, color=(0, 200, 0))
+      self.lcd.display(self.img)
+      time.sleep_ms(1500)
+    else:
+      self.img = self.sensor.snapshot()
+      Draw_CJK_String('模型文件不存在', 5, 35, self.img, color=(180, 0, 0))
+      self.lcd.display(self.img)
+      time.sleep_ms(1500)
+
 
   def change_camera(self, choice):
     try:
