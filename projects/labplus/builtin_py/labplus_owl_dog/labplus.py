@@ -92,16 +92,11 @@ class AI_Camera_GO(object):
             self.btn = Button()
             # self.btn_A = button(16)
             # self.btn_B = button(17)
-            #XGO 
             
-            # fm.register(33, fm.fpioa.UARTHS_RX, force=True)
-            # fm.register(32, fm.fpioa.UARTHS_TX, force=True)
-            # self.uart_DOG = UART(UART.UARTHS, 115200, 8, 0, 0, timeout=1000, read_buf_len=4096)
-            # self.dog = XGO(UART.UARTHS) 
-
+            #XGO 
             fm.register(33, fm.fpioa.UART2_RX, force=True)
             fm.register(32, fm.fpioa.UART2_TX, force=True)
-            self.uart_DOG = UART(UART.UART2, 115200, 8, 0, 0, timeout=1000, read_buf_len=4096)
+            # self.uart_DOG = UART(UART.UART2, 115200, 8, 0, 0, timeout=1000, read_buf_len=4096)
             self.dog = XGO(UART.UART2) 
             
         except:
@@ -172,5 +167,3 @@ class AI_Camera_GO(object):
 
     def color_recognization_init(self, choice=1):
         self.color_r = color_recognization(choice=choice)
-
-
