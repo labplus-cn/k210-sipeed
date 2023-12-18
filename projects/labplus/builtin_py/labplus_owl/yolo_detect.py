@@ -13,7 +13,8 @@ class YOLO_DETECT(object):
         self.anchor = (1.08, 1.19, 3.42, 4.41, 6.63, 11.38, 9.42, 5.11, 16.62, 10.52)
         a = self.kpu.init_yolo2(self.task, 0.5, 0.3, 5, self.anchor)
         self.change_camera(choice=choice)
-        time.sleep(1)
+        time.sleep(0.5)
+        self.kpu.memtest()
     
     def recognize(self):
         self.clock.tick()
@@ -24,7 +25,6 @@ class YOLO_DETECT(object):
                 a=img.draw_rectangle(i.rect(), color=(0,255,0), thickness=2)
                 a=self.lcd.display(img)
                 self.lcd.draw_string(i.x(), i.y(), self.classes[i.classid()], self.lcd.GREEN, self.lcd.WHITE)
-                # self.lcd.draw_string(5,5,'num:'+str(i.objnum()), self.lcd.GREEN , self.lcd.WHITE)
                 # print(i.classid())
             return code[0].classid(),int(round(code[0].value(),2)*100),code[0].objnum()
             # return code[0].classid(),int(round(code[0].value(),2)*100)

@@ -143,7 +143,7 @@ class XGO():
             changePara('xgolite')
         else:
             changePara('xgomini')
-            print("ERROR!Can't read firmware version!")
+            print("ERROR! Can't read firmware version!")
         self.mintime = 0.65
         self.reset()
         self.init_yaw = self.read_yaw()

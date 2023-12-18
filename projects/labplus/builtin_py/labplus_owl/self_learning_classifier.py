@@ -14,6 +14,7 @@ class Self_learning_classifier(object):
     self.sensor = sensor
     self.kpu = kpu
     self.lcd = lcd
+    self.img = None
     gc.collect()
 
     #A键
@@ -35,56 +36,52 @@ class Self_learning_classifier(object):
     self.flag_save = 0
     self.class_img_num = 0
     self.sample_img_num = 0
-    
 
+    self.kpu.memtest()
+    
   # snapshot every class
   def add_class_img(self):
     self.flag_add_class = 1
     self.flag_add_sample = 0
     # while True:
-    img = self.sensor.snapshot()
-    # img = img.draw_string(0, 0, "add class image", color=(0,255,0),scale=2)
-    Draw_CJK_String('按A键按顺序添加分类图片', 5, 5, img, color=(0, 255, 0))
+    self.img = self.sensor.snapshot()
+    Draw_CJK_String('按A键按顺序添加分类图片', 5, 5, self.img, color=(0, 255, 0))
     if self.key.value() == 0:
         time.sleep_ms(30)
         if self.key.value() == 0:
-          index = self.classifier.add_class_img(img)
-          # print("add class img:", index)
-          # img = img.draw_string(0, 0, "add class:{0}".format(index), color=(0,255,0),scale=1)
-          Draw_CJK_String('添加分类图片，id：{0}'.format(index), 5, 20, img, color=(0, 255, 0))
-          self.lcd.display(img)
+          index = self.classifier.add_class_img(self.img)
+          # print("add class self.img:", index)
+          Draw_CJK_String('添加分类图片，id：{0}'.format(index), 5, 20, self.img, color=(0, 255, 0))
+          self.lcd.display(self.img)
           time.sleep_ms(3000)
           if index >= self.class_num-1:
-            # print("Add class img successed.")
-            del img
+            # print("Add class self.img successed.")
+            del self.img
             self.flag_add_class = 0
             self.flag_add_sample = 1
             return
-    self.lcd.display(img)
+    self.lcd.display(self.img)
    
-
-
-  # capture img
+  # capture self.img
   def add_sample_img(self):
     self.flag_add_sample = 1
     # while True:
-    img = self.sensor.snapshot()
-    Draw_CJK_String('按B键添加训练集图片', 5, 5, img, color=(0, 0, 200))
+    self.img = self.sensor.snapshot()
+    Draw_CJK_String('按B键添加训练集图片', 5, 5, self.img, color=(0, 0, 200))
     if self.key_b.value() == 0:
         time.sleep_ms(30)
         if self.key_b.value() == 0:
-          index = self.classifier.add_sample_img(img)
-          Draw_CJK_String('添加训练集图片{0}'.format(index+1), 5, 20, img, color=(0, 0, 200))
-          self.lcd.display(img)
+          index = self.classifier.add_sample_img(self.img)
+          Draw_CJK_String('添加训练集图片{0}'.format(index+1), 5, 20, self.img, color=(0, 0, 200))
+          self.lcd.display(self.img)
           time.sleep_ms(2000)
           if index >= self.sample_num-1:
-            print("Add sample img successed.")
-            del img
+            print("Add sample self.img successed.")
+            # del self.img
             self.flag_add_sample = 0
             self.flag_train=1
-            # break
             return
-    self.lcd.display(img)
+    self.lcd.display(self.img)
 
   # train
   def train(self):
@@ -92,33 +89,34 @@ class Self_learning_classifier(object):
     self.flag_train=0
 
   def predict(self):
-    img = self.sensor.snapshot()
-    Draw_CJK_String('识别中...', 5, 5, img, color=(0, 255, 0))
+    gc.collect()
+    self.img = self.sensor.snapshot()
+    Draw_CJK_String('识别中...', 5, 5, self.img, color=(0, 255, 0))
     res_index = None
     min_dist = None
     try:
-        res_index, min_dist = self.classifier.predict(img)
+        res_index, min_dist = self.classifier.predict(self.img)
     except Exception as e:
-        print("predict err:", e)
+        print("err:", e)
         return res_index,min_dist
     if res_index >= 0 and min_dist <= self.threshold :
         
       if(min_dist <= self.threshold):
-        Draw_CJK_String('识别到id:{0}'.format(res_index), 5, 20, img, color=(0, 255, 0))
-        self.lcd.display(img)
+        Draw_CJK_String('识别到id:{0}'.format(res_index), 5, 20, self.img, color=(0, 255, 0))
+        print('识别到id:{0}'.format(res_index))
+        self.lcd.display(self.img)
         return res_index,min_dist
     else:
-        Draw_CJK_String('未识别到', 5, 20, img, color=(0, 255, 0))
-        self.lcd.display(img)
+        Draw_CJK_String('未识别到', 5, 20, self.img, color=(0, 255, 0))
+        self.lcd.display(self.img)
         return None,None
 
   def save_classifier(self, name="classes.classifier"):
     self.classifier.save(name)
-    img = self.sensor.snapshot()
-    Draw_CJK_String('保存模型成功', 5, 35, img, color=(0, 200, 0))
-    self.lcd.display(img)
+    self.img = self.sensor.snapshot()
+    Draw_CJK_String('保存模型成功', 5, 35, self.img, color=(0, 200, 0))
+    self.lcd.display(self.img)
     time.sleep_ms(1500)
-    # self.flag_save = 0
 
   def load_classifier(self, name="classes.classifier"):
     file_exit = False
@@ -142,6 +140,17 @@ class Self_learning_classifier(object):
       Draw_CJK_String('模型文件不存在', 5, 35, self.img, color=(180, 0, 0))
       self.lcd.display(self.img)
       time.sleep_ms(1500)
+  
+  def __del__(self):
+    a = self.kpu.deinit(self.model)
+    print('kpu.deinit:{}'.format(a))
+    del self.model
+    del self.classifier
+    del self.img
+    del self.lcd
+    del self.sensor
+    del self.kpu
+    gc.collect()
 
 
   def change_camera(self, choice):

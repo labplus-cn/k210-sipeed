@@ -14,6 +14,7 @@ from color import color_recognization
 from fpioa_manager import fm
 from xgo import XGO
 from modules import ws2812
+
 class Button():
     def __init__(self):
         fm.register(16, fm.fpioa.GPIOHS16, force=True)
