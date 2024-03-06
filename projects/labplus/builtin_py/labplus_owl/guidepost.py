@@ -8,31 +8,44 @@ class Guidepost(object):
         self.sensor = sensor
         self.kpu = kpu
         self.task = self.kpu.load(0xc50000)
+        # self.task = self.kpu.load('/sd/qingjiao3.kmodel')
+        self.img = None
+        self.fmap = None
         self.lcd.clear()
         self.labels = ["stop","none","left","right"]
-
         self.change_camera(choice=choice)
+        self.kpu.memtest()
     
     def recognize(self):
-        img = self.sensor.snapshot()
-        fmap = self.kpu.forward(self.task, img)
-        plist=fmap[:]
+        gc.collect()
+        # print('==Guidepost==')
+        self.img = self.sensor.snapshot()
+        try:
+            self.fmap = self.kpu.forward(self.task, self.img)
+        except Exception as e:
+            print(e)
+        plist=self.fmap[:]
         pmax=max(plist)
         max_index=plist.index(pmax)
-        a = self.lcd.display(img, oft=(40,0))
-        if(pmax>0.75):
+        a = self.lcd.display(self.img, oft=(40,0))
+        self.kpu.fmap_free(pmax)
+        if(pmax>0.7):
             self.lcd.draw_string(240, 0, "id:%s"%(self.labels[max_index].strip()), self.lcd.GREEN)
             return max_index,int(round(pmax,2)*100)
         else:
-            # self.lcd.draw_string(200, 0, "pmax:      ", self.lcd.GREEN)
             self.lcd.draw_string(240, 0, "id:       ",  self.lcd.GREEN)
             return None,None
 
     def __del__(self):
         a = self.kpu.deinit(self.task)
+        print('kpu.deinit:{}'.format(a))
         del self.task
+        del self.fmap
+        # del self.img
+        # del self.lcd
+        # del self.sensor
+        # del self.kpu
         gc.collect()
-        # time.sleep(1)
 
     def change_camera(self, choice):
         try:

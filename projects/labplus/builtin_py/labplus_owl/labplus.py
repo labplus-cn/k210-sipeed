@@ -21,7 +21,9 @@ from guidepost import *
 from kpu_kmodel import *
 from track import *
 
-# utils.gc_heap_size(0xBF000) 
+from display import Draw_CJK_String
+import video
+# utils.gc_heap_size(0x96000) 
 """ 
 -------------------------------------------------------------------------------------------------------
 盛思OWL初始化
@@ -42,6 +44,7 @@ TRACK_MODE= 12 #色块识别
 COLOR_STATISTICS_MODE=13 # 颜色的统计信息
 COLOR_EXTRACTO_MODE=14 # LAB颜色提取器
 APRILTAG_MODE=15
+VIDEO_MODE = 20
 
 
 class AICamera(object):
@@ -144,7 +147,8 @@ class AICamera(object):
       
         # 开始串口监听程序
         time.sleep(0.5)
-        self.uart_listen()
+        self.send_to_zkb_init()
+        # self.uart_listen()
 
     def CheckCode(self, tmp):
         ''' 校验和 取低8位'''
@@ -258,7 +262,7 @@ class AICamera(object):
                         CMD_TEMP.append(str_temp[i])
                     CMD_TEMP.append(checksum[0]) 
                     self.process_cmd(CMD_TEMP)  
-                    print(str(str_temp.decode('UTF-8','ignore')))
+                    # print(str(str_temp.decode('UTF-8','ignore')))
             else:
                 _cmd = self.uart.read()
                 print('**^**')
@@ -398,8 +402,6 @@ class AICamera(object):
                     for i in range(len(str_config)):
                         _config[str_config[i]]=[0.25,i]
                     self.asr.config(_config)
-                    # self.lcd.draw_string(0,200, 'x:'+str(_config), lcd.WHITE, lcd.BLUE)
-                    # time.sleep(5)
                 elif(CMD[3]==SELF_LEARNING_CLASSIFIER_MODE and CMD[4]==0x04):
                     str_temp = bytes(CMD[9:-1])
                     mode_name = str(str_temp.decode('UTF-8','ignore'))
@@ -412,11 +414,12 @@ class AICamera(object):
                     self.k210.flag_slc_mode_load = 1
                 elif(CMD[3]==KPU_MODEL_MODE and CMD[4]==0x02):
                     str_temp = bytes(CMD[9:-1])
-                    mode_name = str(str_temp.decode('UTF-8','ignore'))
+                    _str = str(str_temp.decode('UTF-8','ignore'))
+                    data = _str.split("|")
+                    print(data)
                     self.k210.mode = KPU_MODEL_MODE
-                    self.kpu_model = KPU_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=mode_name)
+                    self.kpu_model = KPU_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]))
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x03):
-                    # self.lcd.draw_string(0,200, 'tr:'+str(CMD[5]), lcd.WHITE, lcd.BLUE)
                     time.sleep(0.05)
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
@@ -457,10 +460,18 @@ class AICamera(object):
                     self._h=int(data[10])
                     self._freq=int(data[11])
                     self._dual_buff=int(data[12])
+                elif(CMD[3]==VIDEO_MODE and CMD[4]==0x01):
+                    str_temp = bytes(CMD[9:-1])
+                    _str = str(str_temp.decode('UTF-8','ignore'))
+                    data = _str.split("|")
+                    print(data)
+                    choice=CMD[5]
+                    quality=CMD[6]
+                    self.record(choice=choice,path=data[0], interval=int(data[1]), quality=quality, width=int(data[2]), height=int(data[3]), duration=int(data[4]))
+
                                     
 
     def uart_listen(self):
-        self.send_to_zkb_init()
         num = 0
         while True:
             gc.collect()
@@ -734,6 +745,76 @@ class AICamera(object):
         self.sensor.skip_frames(10)
         self.sensor.run(1)
         time.sleep(0.1)
+
+    def record(self, choice=1, path="/sd/capture.avi", interval=100000, quality=50, width=320, height=240, duration=10):
+        self.lcd.init(freq=15000000, invert=1)
+        self.sensor.reset(choice=choice)
+        self.sensor.set_pixformat(sensor.RGB565)
+        self.sensor.set_framesize(sensor.QVGA)
+        self.sensor.set_windowing((width, height))
+        self.sensor.set_hmirror(1)
+        self.sensor.set_vflip(1)
+        if(choice==1 and self.sensor.get_id()==0x2642):
+            self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(1)
+        elif(choice==1 and self.sensor.get_id()==0x5640):
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
+        else:
+            self.sensor.set_vflip(0)
+            self.sensor.set_hmirror(0)
+
+        self.sensor.run(1)
+        self.sensor.skip_frames(30) 
+
+        v = video.open(path, audio=False, record=True, interval=interval, quality=quality)
+
+        fm.register(16, fm.fpioa.GPIOHS0+16)
+        key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
+ 
+        while True:
+            time.sleep_ms(20)
+            img = self.sensor.snapshot()
+            Draw_CJK_String('按A键开始录制', 5, 5, img, color=(0, 255, 0))
+            self.lcd.display(img)
+            if key.value() == 0:
+                time.sleep_ms(30)
+                if key.value() == 0:
+                    Draw_CJK_String('开始录制', 5, 20, img, color=(0, 255, 0))
+                    self.lcd.display(img)
+                    time.sleep_ms(500)
+                    break
+
+        for i in range(int(duration*1000000/interval)):
+            img = self.sensor.snapshot()
+            self.lcd.display(img)
+            img_len = v.record(img)
+
+        print("record_finish")
+        v.record_finish()
+        v.__del__()
+        gc.collect()
+        self.lcd.clear()
+        print(path)
+        print(v)
+        return path
+
+
+    def play(self, path="/sd/capture.avi"):
+        # play avi
+        self.lcd.init(freq=15000000, invert=1)
+        v = video.open(path)
+        print(path)
+        v.volume(50)
+        while True:
+            if v.play() == 0:
+                # print("play end")
+                break
+
+        print("play finish")
+        v.__del__()
+        gc.collect()
+        self.lcd.clear()
     
 try:
     aiCamera=AICamera()

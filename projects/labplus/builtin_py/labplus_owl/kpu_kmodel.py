@@ -2,13 +2,15 @@
 import time
 
 class KPU_KMODEL(object):
-    def __init__(self,choice=1,sensor=None,kpu=None,lcd=None,model=0xc50000):
+    def __init__(self,choice=1,sensor=None,kpu=None,lcd=None,model=0xc50000,width=128,height=128):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
         self.task = self.kpu.load(model)
         self.lcd.clear()
         # self.labels = ["stop","none","left","right"]
+        self.width = width
+        self.height = height
 
         self.change_camera(choice=choice)
     
@@ -36,7 +38,7 @@ class KPU_KMODEL(object):
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
             self.sensor.set_hmirror(1)
-            self.sensor.set_windowing((128, 128))
+            self.sensor.set_windowing((self.width, self.height))
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 

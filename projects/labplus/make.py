@@ -111,19 +111,19 @@ def pack(args):
     os.system(cmd)
 
 def flash(args):
-    import usb.core
-    import usb.util
+    # import usb.core
+    # import usb.util
     # change cp2104 connect to k210
-    dev = usb.core.find(idVendor=0x10c4, idProduct=0xea60)
-    if dev == None:
-        print('not found cp2104 devices')
-        exit(2)
-    dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0004)   # set CP2104.GPIO2 = 0
+    # dev = usb.core.find(idVendor=0x10c4, idProduct=0xea60)
+    # if dev == None:
+    #     print('not found cp2104 devices')
+    #     exit(2)
+    # dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0004)   # set CP2104.GPIO2 = 0
 
-    cmd = 'kflash' + ' -p /dev/ttyUSB0 -b 2000000' + ' build/labplus.bin'
+    cmd = 'kflash' + '  -B kd233 -p /dev/ttyUSB0 -b 1500000' + ' build/labplus.bin'
     os.system(cmd)
     
-    dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0404)   # set CP2104.GPIO2 = 1
+    # dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0404)   # set CP2104.GPIO2 = 1
 
 def clean(args):
     import shutil
