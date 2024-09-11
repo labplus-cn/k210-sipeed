@@ -44,6 +44,7 @@ TRACK_MODE= 12 #色块识别
 COLOR_STATISTICS_MODE=13 # 颜色的统计信息
 COLOR_EXTRACTO_MODE=14 # LAB颜色提取器
 APRILTAG_MODE=15
+KPU_YOLO_MODEL_MODE = 16 #自定义YOLO模型
 VIDEO_MODE = 20
 
 
@@ -84,6 +85,8 @@ class AICamera(object):
             self.flag_color_ex_recognize = 0     
             #
             self.flag_apriltag_recognize = 0
+            #
+            self.flag_kpu_yolol_recognize = 0
             
     def __init__(self):
         fm.register(32, fm.fpioa.UART2_TX, force=True)
@@ -128,6 +131,7 @@ class AICamera(object):
         self.apriltag=None
         self.kpu_model=None
         self.qrcode = None
+        self.kpu_yolo_model=None
 
         # sensor config
         self._choice=1
@@ -148,7 +152,7 @@ class AICamera(object):
         # 开始串口监听程序
         time.sleep(0.5)
         self.send_to_zkb_init()
-        # self.uart_listen()
+        self.uart_listen()
 
     def CheckCode(self, tmp):
         ''' 校验和 取低8位'''
@@ -349,8 +353,6 @@ class AICamera(object):
                 elif(CMD[3]==GUIDEPOST_MODE and CMD[4]==0x02):
                     self.k210.flag_guidepost_recognize = 1
                 elif(CMD[3]==KPU_MODEL_MODE and CMD[4]==0x01):
-                    # self.k210.mode = KPU_MODEL_MODE
-                    # self.guidepost = Guidepost(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
                     pass
                 elif(CMD[3]==KPU_MODEL_MODE and CMD[4]==0x03):
                     self.k210.flag_kpu_recognize = 1
@@ -392,7 +394,9 @@ class AICamera(object):
                 elif(CMD[3]==APRILTAG_MODE and CMD[4]==0x02 and self.apriltag!=None ):
                     self.k210.flag_apriltag_recognize = 1                  
                 elif(CMD[3]==APRILTAG_MODE and CMD[4]==0x03):
-                    self.apriltag.set_families(int(CMD[5]))                                            
+                    self.apriltag.set_families(int(CMD[5]))     
+                elif(CMD[3]==KPU_YOLO_MODEL_MODE and CMD[4]==0x03):
+                    self.k210.flag_kpu_yolol_recognize = 1                                       
             elif(CMD[2]==0x02):
                 if(CMD[3]==SPEECH_RECOGNIZATION_MODE and CMD[4]==0x02):
                     time.sleep(0.1)
@@ -464,10 +468,17 @@ class AICamera(object):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
                     data = _str.split("|")
-                    print(data)
+                    # print(data)
                     choice=CMD[5]
                     quality=CMD[6]
                     self.record(choice=choice,path=data[0], interval=int(data[1]), quality=quality, width=int(data[2]), height=int(data[3]), duration=int(data[4]))
+                elif(CMD[3]==KPU_YOLO_MODEL_MODE and CMD[4]==0x02):
+                    str_temp = bytes(CMD[9:-1])
+                    _str = str(str_temp.decode('UTF-8','ignore'))
+                    data = _str.split("|")
+                    print(data)
+                    self.k210.mode = KPU_YOLO_MODEL_MODE
+                    self.kpu_yolo_model = KPU_YOLO_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]),anchors=eval(data[3]))
 
                                     
 
@@ -666,6 +677,13 @@ class AICamera(object):
                             _str=tag_family+'|'+tag_id
                             self.AI_Uart_CMD_String(cmd=0x0f,cmd_type=0x02,str_buf=_str)
                         # self.k210.flag_apriltag_recognize=0
+                elif(self.k210.mode==KPU_YOLO_MODEL_MODE and self.kpu_yolo_model!=None):
+                    if(self.k210.flag_kpu_yolol_recognize):
+                        id,value = self.kpu_yolo_model.recognize()
+                        if(id==None):
+                            self.AI_Uart_CMD(0x01,0x10,0x03,cmd_data=[0xff])
+                        else:
+                            self.AI_Uart_CMD(0x01,0x10,0x03,cmd_data=[id,value])
             except Exception as e:
                 s=str(e)
                 print(s)
