@@ -169,26 +169,30 @@ class AICamera(object):
             CMD_TEMP.append(0)
         for i in range(len(CMD_TEMP)):
             check_sum = check_sum+CMD_TEMP[i]
-        #print_x16(CMD_TEMP)
+        
+        # self.uart.write(bytes(CMD_TEMP))
+        # self.uart.write(bytes([check_sum & 0xFF]))
+        CMD_TEMP.append(check_sum & 0xFF)
         self.uart.write(bytes(CMD_TEMP))
-        self.uart.write(bytes([check_sum & 0xFF]))
-        # print( 'send:'+str(CMD_TEMP))
+        self.print_x16(CMD_TEMP)
         
     def AI_Uart_CMD_String(self,cmd=0x00, cmd_type=0x00, cmd_data=[0x00], str_len=0, str_buf=''):
-        check_sum = 0
+        # check_sum = 0
         CMD = [0xBB, 0xAA, 0x02, cmd, cmd_type]
         CMD.extend(cmd_data)
         for i in range(15-len(cmd_data)):
             CMD.append(0)
-        # for i in range(len(CMD)):
-        #     check_sum = check_sum+CMD[i]
-        # print_x16(CMD)
-        self.uart.write(bytes(CMD))
+    
+        # self.uart.write(bytes(CMD))
         str_temp = bytes(str_buf, 'utf-8')
         str_len = len(str_temp)
-        self.uart.write(bytes([str_len]))
-        self.uart.write(str_temp)
-        self.uart.write(bytes([check_sum]))   
+        # self.uart.write(bytes([str_len]))
+        # self.uart.write(str_temp)
+        # self.uart.write(bytes([check_sum & 0xff]))   
+        CMD = bytes(CMD) + bytes([str_len]) + str_temp + bytes([0xAB])
+        self.uart.write(CMD)   
+        self.print_x16(CMD)
+        print('='*8)
     
     def print_x16(self,date):
         for i in range(len(date)):
@@ -268,9 +272,9 @@ class AICamera(object):
                     self.process_cmd(CMD_TEMP)  
                     # print(str(str_temp.decode('UTF-8','ignore')))
             else:
-                _cmd = self.uart.read()
+                print(head)
                 print('**^**')
-                del _cmd
+                # del _cmd
                 gc.collect()
 
     def process_cmd(self,cmd):
@@ -486,10 +490,8 @@ class AICamera(object):
         num = 0
         while True:
             gc.collect()
-            time.sleep_ms(10)
-            # num+=1
-            # lcd.draw_string(200,0, 'listen:'+str(num), lcd.WHITE, lcd.BLUE)
-            # lcd.draw_string(0,0, 'mode:'+str(self.k210.mode), lcd.WHITE, lcd.BLUE)
+            time.sleep_ms(5)
+          
             try:
                 self.uart_handle()
             except Exception as e:
@@ -502,14 +504,14 @@ class AICamera(object):
                     if(self.k210.flag_color_statistics_recognize):
                         time.sleep_ms(10)
                         tmp =  self.color_statistics.recognize()
-                        if(tmp==None):
-                            self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
-                        elif(tmp[-1]==None):
-                            self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
+                        if(tmp==None or tmp[-1]==None):
+                            # self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
+                            print('^'*3)
+                            pass
                         else:
                             data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line=tmp
                             _cmd_data = [data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15]
-                            _str = str(_line[0])+','+str(_line[1])+','+str(_line[2])+','+str(_line[3])+','+str(_line[4])+','+str(_line[5])+','+str(_line[6])+','+str(_line[7])
+                            _str = str([_line[0],_line[1],_line[2],_line[3],_line[4],_line[5],_line[6],_line[7]])
                             self.AI_Uart_CMD_String(cmd=0x0d,cmd_type=0x02,cmd_data=_cmd_data,str_buf=_str)
                         # self.k210.flag_color_statistics_recognize = 0
                 elif(self.k210.mode==MNIST_MODE and self.mnist!=None):
