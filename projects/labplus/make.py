@@ -60,6 +60,8 @@ def build(args):
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_1956.mk']
     if args.board == 'owl_2024':
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_2024.mk']
+    if args.board == 'owl_box':
+        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_2024_box.mk']
     if args.board == 'owl':
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl.mk']
     if args.board == 'owl_dog':
