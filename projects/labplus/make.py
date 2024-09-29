@@ -132,7 +132,7 @@ def clean(args):
     import shutil
     if os.path.exists("./build"):
         shutil.rmtree("./build")
-        print("cleaned.. ")
+        print("cleaned. ")
 
 if __name__ == "__main__":
     main()

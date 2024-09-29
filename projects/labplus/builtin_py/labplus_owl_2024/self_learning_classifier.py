@@ -18,11 +18,11 @@ class Self_learning_classifier(object):
     gc.collect()
 
     #A键
-    fm.register(16, fm.fpioa.GPIOHS0+16)
-    self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
+    fm.register(12, fm.fpioa.GPIOHS0, force=True)
+    self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
     #B键
-    fm.register(17, fm.fpioa.GPIOHS0+17)
-    self.key_b = GPIO(GPIO.GPIOHS0+17, GPIO.PULL_UP)
+    fm.register(13, fm.fpioa.GPIOHS1, force=True)
+    self.key = GPIO(GPIO.GPIOHS1, GPIO.PULL_UP)
 
     gc.collect()
     self.model = self.kpu.load(self.model_addr)

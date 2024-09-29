@@ -48,13 +48,17 @@ class  speech_recognize(object):
     self.sets_key_id = {}
     self.sets_key_threshold = {}
     fm.register(20,fm.fpioa.I2S0_IN_D0, force=True)
-    fm.register(18,fm.fpioa.I2S0_SCLK, force=True)
     fm.register(19,fm.fpioa.I2S0_WS, force=True)
+    fm.register(18,fm.fpioa.I2S0_SCLK, force=True)
+   
     rx = I2S(I2S.DEVICE_0)
     rx.channel_config(rx.CHANNEL_0, rx.RECEIVER, align_mode=I2S.STANDARD_MODE)
     rx.set_sample_rate(sample_rate)
+    print(rx)
     self.t = maix_asr(self.model_addr, I2S.DEVICE_0, 3, shift=1) # maix bit set shift=1
-    self.tim = Timer(Timer.TIMER0, Timer.CHANNEL0, mode=Timer.MODE_PERIODIC, period=64, callback=on_timer_asr, arg=self.t)
+    self.tim = Timer(Timer.TIMER1, Timer.CHANNEL1, mode=Timer.MODE_PERIODIC, period=64, callback=on_timer_asr, arg=self.t)
+    if self.tim == None:
+      OSError('can`t start timer{}'.format(self.tim))
     self.tim.start()
     self.lcd = lcd
     self.image = image.Image()
@@ -68,12 +72,12 @@ class  speech_recognize(object):
     time.sleep(0.1)
 
   def recognize(self):
-    Draw_CJK_String('识别中...', 120, 120, self.image, color=(0, 222, 0))
+    Draw_CJK_String('识别中...', 0, 100, self.image, color=(0, 180, 0))
     self.lcd.display(self.image)
     tmp = self.t.recognize()
-    print(tmp)
+    # print(tmp)
     if isinstance(tmp, dict):
-      # print(tmp)
+      print(tmp)
       for key in tmp:
         if key in self.sets_key_id:
           id = self.sets_key_id[key]

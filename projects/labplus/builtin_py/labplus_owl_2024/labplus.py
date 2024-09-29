@@ -89,6 +89,8 @@ class AICamera(object):
             self.flag_kpu_yolol_recognize = 0
             
     def __init__(self):
+        # fm.register(32, fm.fpioa.UART2_TX, force=True)
+        # fm.register(33, fm.fpioa.UART2_RX, force=True)
         fm.register(11, fm.fpioa.UART2_TX, force=True)
         fm.register(10, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
@@ -408,9 +410,11 @@ class AICamera(object):
                     time.sleep(0.1)
                     _config ={}
                     str_temp = bytes(CMD[9:-1])
+                    print(str_temp)
                     str_config = str(str_temp.decode('UTF-8','ignore')).split(',')
                     for i in range(len(str_config)):
-                        _config[str_config[i]]=[0.25,i]
+                        _config[str_config[i]]=[0.15,i]
+                    print(_config)
                     self.asr.config(_config)
                 elif(CMD[3]==SELF_LEARNING_CLASSIFIER_MODE and CMD[4]==0x04):
                     str_temp = bytes(CMD[9:-1])
@@ -845,5 +849,5 @@ except Exception as e:
     lcd.clear((0, 0, 255))
     s=str(e)
     lcd.draw_string(0,200, s, lcd.WHITE, lcd.BLUE)
-    if(len(s)>30):
-        lcd.draw_string(0,220, s[31:-1], lcd.WHITE, lcd.BLUE)
+    if(len(s)>20):
+        lcd.draw_string(0,220, s[21:-1], lcd.WHITE, lcd.BLUE)

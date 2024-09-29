@@ -6,8 +6,8 @@ class YOLO_DETECT(object):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
-        self.lcd.init(freq=15000000, invert=1)
-        self.lcd.rotation(1)
+        # self.lcd.init(freq=15000000, invert=1)
+        # self.lcd.rotation(1)
         self.clock = time.clock()
         self.classes = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
         self.task = self.kpu.load(0x450000)

@@ -14,8 +14,8 @@ class QRCode(object):
         self.init_data()
         self.load_data()
 
-        fm.register(16, fm.fpioa.GPIOHS0+16)
-        self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
+        fm.register(12, fm.fpioa.GPIOHS0, force=True)
+        self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
 
         self.change_camera(choice=choice)
         time.sleep(1)
@@ -27,7 +27,7 @@ class QRCode(object):
         # index = -1
         self.flag_add = 1
         info = None
-        # while True:
+        # while True:add_face
         img = self.sensor.snapshot()
         res = img.find_qrcodes()
         Draw_CJK_String('按A键添加二维码数据id:', 5, 5, img, color=(0, 128, 0))
@@ -146,12 +146,12 @@ class Apriltag(object):
         #不可修改
         self.sensor.set_auto_gain(False)
         self.sensor.set_auto_whitebal(False)
-        if(self.sensor.get_id()==0x2642):
-            self.sensor.set_vflip(1)
-            self.sensor.set_hmirror(1)
-        elif(self.sensor.get_id()==0x5640):
-            self.sensor.set_vflip(0)
-            self.sensor.set_hmirror(0)
+        # if(self.sensor.get_id()==0x2642):
+        #     self.sensor.set_vflip(1)
+        #     self.sensor.set_hmirror(1)
+        # elif(self.sensor.get_id()==0x5640):
+        #     self.sensor.set_vflip(0)
+        #     self.sensor.set_hmirror(0)
 
         self.img = None
         self.tag_args = (None,None)

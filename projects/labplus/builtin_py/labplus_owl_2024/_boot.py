@@ -1,5 +1,5 @@
 import os, sys, time
-import lcd,image
+# import lcd
 
 sys.path.append('')
 sys.path.append('.')

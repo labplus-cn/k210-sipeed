@@ -1,13 +1,11 @@
 import time
-# import KPU as kpu
-# import lcd,sensor
 
 class FACE_DETECT(object):
     def __init__(self,choice,sensor,kpu,lcd):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
-        self.lcd.init(invert=1)
+        # self.lcd.init(invert=1)
         self.lcd.rotation(1)
         self.clock = time.clock()
         self.task = self.kpu.load(0x300000)

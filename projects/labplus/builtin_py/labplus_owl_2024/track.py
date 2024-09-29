@@ -35,17 +35,18 @@ class Track(object):
         self.lcd = lcd
         self.sensor = sensor
         self.lcd.init(freq=15000000, invert=1)
+        self.rotation(1)
         self.threshold = threshold
         self.area_threshold = area_threshold
         self.img = None
 
         # self.change_camera(choice=choice)
-        if(choice==1 and self.sensor.get_id()==0x2642):
-            self.sensor.set_vflip(1)
-            self.sensor.set_hmirror(1)
-        elif(choice==1 and self.sensor.get_id()==0x5640):
-            self.sensor.set_vflip(0)
-            self.sensor.set_hmirror(0)
+        # if(choice==1 and self.sensor.get_id()==0x2642):
+        #     self.sensor.set_vflip(1)
+        #     self.sensor.set_hmirror(1)
+        # elif(choice==1 and self.sensor.get_id()==0x5640):
+        #     self.sensor.set_vflip(0)
+        #     self.sensor.set_hmirror(0)
         
         # self.init_data()
         # self.load_data()

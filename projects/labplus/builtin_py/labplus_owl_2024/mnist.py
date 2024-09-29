@@ -12,6 +12,7 @@ class MNIST(object):
 
         try:
             self.lcd.init(freq=15000000, invert=1)
+            self.lcd.rotation(1)
             self.lcd.clear(0,0,0)
             self.task_mnist = self.kpu.load(0x610000)
             self.change_camera(choice=choice)

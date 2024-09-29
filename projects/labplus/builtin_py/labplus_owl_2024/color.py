@@ -15,8 +15,8 @@ class Color(object):
         self.threshold_list = []
         self.color_file_exits = 0
 
-        fm.register(16, fm.fpioa.GPIOHS0+16)
-        self.key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)
+        fm.register(12, fm.fpioa.GPIOHS0, force=True)
+        self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
 
         self.change_camera(choice=choice)
         self.init_data()
@@ -187,19 +187,20 @@ class Color_Statistics(object):
     def __init__(self, lcd=None, sensor=None):
         self.lcd = lcd
         self.sensor = sensor
-        self.lcd.init(freq=15000000, invert=1)
+        # self.lcd.init(freq=15000000, invert=1)
+        # self.lcd.rotation(1)
         self.clock = time.clock()
         self.img = None
         self.img_binary1=200
         self.img_binary2=255
         self.line_binary1=230
         self.line_binary2=255
-        if(self.sensor.get_id()==0x2642):
-            self.sensor.set_vflip(1)
-            self.sensor.set_hmirror(1)
-        elif(self.sensor.get_id()==0x5640):
-            self.sensor.set_vflip(0)
-            self.sensor.set_hmirror(0)
+        # if(self.sensor.get_id()==0x2642):
+        #     self.sensor.set_vflip(1)
+        #     self.sensor.set_hmirror(1)
+        # elif(self.sensor.get_id()==0x5640):
+        #     self.sensor.set_vflip(0)
+        #     self.sensor.set_hmirror(0)
         time.sleep(0.2)
 
     def recognize(self):
@@ -256,12 +257,12 @@ class Color_Extractor(object):
     def __init__(self, lcd=None, sensor=None):
         self.lcd = lcd
         self.sensor = sensor
-        if(self.sensor.get_id()==0x2642):
-            self.sensor.set_vflip(1)
-            self.sensor.set_hmirror(1)
-        elif(self.sensor.get_id()==0x5640):
-            self.sensor.set_vflip(0)
-            self.sensor.set_hmirror(0)
+        # if(self.sensor.get_id()==0x2642):
+        #     self.sensor.set_vflip(1)
+        #     self.sensor.set_hmirror(1)
+        # elif(self.sensor.get_id()==0x5640):
+        #     self.sensor.set_vflip(0)
+        #     self.sensor.set_hmirror(0)
         # self.lcd.init(freq=15000000, invert=1)
         self.img = None
         self.color_l=None
