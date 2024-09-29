@@ -189,9 +189,7 @@ class AICamera(object):
         # self.uart.write(bytes(CMD))
         str_temp = bytes(str_buf, 'utf-8')
         str_len = len(str_temp)
-        # self.uart.write(bytes([str_len]))
-        # self.uart.write(str_temp)
-        # self.uart.write(bytes([check_sum & 0xff]))   
+
         CMD = bytes(CMD) + bytes([str_len]) + str_temp + bytes([0xAB])
         self.uart.write(CMD)   
         # self.print_x16(CMD)
@@ -287,6 +285,10 @@ class AICamera(object):
             if(CMD[2]==0x01):
                 if(CMD[3]==0x01 and CMD[4]==0xFF):
                     self.reset()
+                elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x01):
+                    self.init_canvas()
+                elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x02):
+                    self.clear_canvas()
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
                     self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
@@ -489,6 +491,21 @@ class AICamera(object):
                     print(data)
                     self.k210.mode = KPU_YOLO_MODEL_MODE
                     self.kpu_yolo_model = KPU_YOLO_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]),anchors=eval(data[3]))
+                elif(CMD[3]==DEFAULT_MODE and CMD[4]==0xFA):
+                    str_temp = bytes(CMD[9:-1])
+                    _str = str(str_temp.decode('UTF-8','ignore'))
+                    data = eval(_str)
+                    print(data)
+
+                    scale = CMD[5]
+                    x = data[0]
+                    y = data[1]
+                    txt = data[2]
+
+                    self.canvas_txt(txt,scale,x,y)
+                    
+                
+
 
                                     
 
@@ -749,7 +766,7 @@ class AICamera(object):
         self.kpu.memtest()
   
 
-    def change_camera(self,_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=1,_hmirror=1,_brightness=0,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=18000000,_dual_buff=False):
+    def change_camera(self,_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=1,_hmirror=1,_brightness=-1,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=18000000,_dual_buff=False):
         try:
             # self.sensor.reset(choice=_choice,freq=_freq,dual_buff=_dual_buff)
             self.sensor.reset(freq=_freq,dual_buff=_dual_buff)
@@ -842,6 +859,17 @@ class AICamera(object):
         v.__del__()
         gc.collect()
         self.lcd.clear()
+    
+    def init_canvas(self):
+        self.lcd.clear(lcd.WHITE)
+        self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
+    
+    def clear_canvas(self):
+        self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
+ 
+    def canvas_txt(self,txt,scale,x,y):
+        Draw_CJK_String(txt, x, y, self.img, color=(0, 0, 0))
+        self.lcd.display(self.img)
     
 try:
     aiCamera=AICamera()
