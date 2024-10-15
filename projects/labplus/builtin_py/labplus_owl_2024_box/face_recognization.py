@@ -30,7 +30,6 @@ class Face_recognization(object):
                 'ID:5', 'ID:6', 'ID:7', 'ID:8', 'ID:9']
 
         fm.register(12, fm.fpioa.GPIOHS0, force=True)
-
         self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
 
         a = self.kpu.init_yolo2(self.task_fd, 0.5, 0.3, 5, self.anchor)
@@ -56,9 +55,9 @@ class Face_recognization(object):
             try:
                 code = self.kpu.run_yolo2(self.task_fd, img)
             except Exception as e:
-                self.lcd.draw_string(0, 30, '3:'+str(e), self.lcd.WHITE, self.lcd.BLUE)
+                self.lcd.draw_string(10, 30, '3:'+str(e), self.lcd.WHITE, self.lcd.BLUE)
                 time.sleep(5)
-            Draw_CJK_String('按A键添加人脸数据', 5, 5, img, color=(0, 255, 0))
+            Draw_CJK_String('按A键添加人脸数据', 45, 5, img, color=(0, 255, 0))
             
             if code:
                 for i in code:
@@ -102,7 +101,7 @@ class Face_recognization(object):
                             self.save_data(self.record_ftr)
                             # print("add a face.")
                             # a = img.draw_string(5,15, "Add a face, id={0}".format(tmp_num), color=(0, 255, 0), scale=1)
-                            Draw_CJK_String('添加人脸数据, id={0}'.format(tmp_num), 5, 20, img, color=(0, 255, 0))
+                            Draw_CJK_String('添加人脸数据, id={0}'.format(tmp_num), 45, 20, img, color=(0, 255, 0))
                             self.lcd.display(img)
                             time.sleep(3)
                             tmp_num = tmp_num + 1
@@ -122,7 +121,7 @@ class Face_recognization(object):
         except Exception as e:
             self.lcd.draw_string(0, 30, '3:'+str(e), self.lcd.WHITE, self.lcd.BLUE)
             time.sleep(5)
-        Draw_CJK_String('按A键添加人脸数据', 5, 5, img, color=(0, 255, 0))
+        Draw_CJK_String('按A键添加人脸数据', 45, 5, img, color=(0, 255, 0))
         
         if code:
             for i in code:
@@ -164,7 +163,7 @@ class Face_recognization(object):
                         self.record_ftr = feature
                         self.record_ftrs.append(self.record_ftr)
                         self.save_data(self.record_ftr)
-                        Draw_CJK_String('添加人脸数据, id={0}'.format(self.tmp_num), 10, 20, img, color=(0, 255, 0))
+                        Draw_CJK_String('添加人脸数据, id={0}'.format(self.tmp_num), 45, 20, img, color=(0, 255, 0))
                         self.lcd.display(img)
                         time.sleep(3)
                         self.tmp_num = self.tmp_num + 1
@@ -178,7 +177,7 @@ class Face_recognization(object):
 
     def face_recognize(self):
         img = self.sensor.snapshot()
-        Draw_CJK_String('识别中...', 5, 5, img, color=(0, 255, 0))
+        Draw_CJK_String('识别中...', 45, 5, img, color=(0, 255, 0))
         self.clock.tick()
         code = self.kpu.run_yolo2(self.task_fd, img)
       
@@ -248,11 +247,12 @@ class Face_recognization(object):
 
     def change_camera(self, choice):
         try:
-            self.sensor.reset(freq=18000000)
+            self.sensor.reset(freq=20000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_brightness(-2)
-            # self.sensor.set_hmirror(1)
+            self.sensor.set_vflip(1)
+            # self.sensor.set_windowing((240,240))
+            self.sensor.set_brightness(-1) #亮度
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 

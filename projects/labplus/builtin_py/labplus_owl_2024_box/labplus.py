@@ -100,10 +100,12 @@ class AICamera(object):
         self.kpu = kpu
         self.sensor = sensor
           
-        self.lcd.init(freq=15000000, invert=1)
+        self.lcd.init(freq=18000000)
+        self.lcd.direction(0x28)
+        self.lcd.mirror(True)
         self.lcd.rotation(1)
         try:
-            background = image.Image('/flash/logo.jpg', copy_to_fb=True)
+            background = image.Image('/flash/logo320.jpg', copy_to_fb=True)
             self.lcd.display(background)
             del background
         except Exception as e:
@@ -766,7 +768,7 @@ class AICamera(object):
         self.kpu.memtest()
   
 
-    def change_camera(self,_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=1,_hmirror=1,_brightness=-1,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=18000000,_dual_buff=False):
+    def change_camera(self,_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=1,_hmirror=1,_brightness=-1,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=20000000,_dual_buff=False):
         try:
             # self.sensor.reset(choice=_choice,freq=_freq,dual_buff=_dual_buff)
             self.sensor.reset(freq=_freq,dual_buff=_dual_buff)
@@ -862,10 +864,10 @@ class AICamera(object):
     
     def init_canvas(self):
         self.lcd.clear(lcd.WHITE)
-        self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
+        self.img =  image.Image('/flash/white320.jpg', copy_to_fb=True)
     
     def clear_canvas(self):
-        self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
+        self.img =  image.Image('/flash/white320.jpg', copy_to_fb=True)
  
     def canvas_txt(self,txt,scale,x,y):
         Draw_CJK_String(txt, x, y, self.img, color=(0, 0, 0))
