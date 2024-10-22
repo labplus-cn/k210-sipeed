@@ -51,11 +51,11 @@ class QRCode(object):
                         # print(self.QRCodeName)
                         self.index = -1
                         self.flag_add = 0
-                        del img
                         gc.collect()
                         # break
                 # break 
-        a = self.lcd.display(img)
+        self.lcd.display(img)
+        del img
         gc.collect()     
             
     def recognize(self):

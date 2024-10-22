@@ -4,9 +4,11 @@ import gc
 
 class Guidepost(object):
     def __init__(self,choice=1,sensor=None,kpu=None,lcd=None):
+        gc.collect()
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
+        self.kpu.memtest()
         self.task = self.kpu.load(0xc50000)
         # self.task = self.kpu.load('/sd/qingjiao3.kmodel')
         self.img = None
@@ -17,17 +19,18 @@ class Guidepost(object):
         self.kpu.memtest()
     
     def recognize(self):
-        gc.collect()
-        # print('==Guidepost==')
+        self.kpu.memtest()
+        print('==Guidepost==')
         self.img = self.sensor.snapshot()
         try:
             self.fmap = self.kpu.forward(self.task, self.img)
         except Exception as e:
+            self.kpu.memtest()
             print(e)
         plist=self.fmap[:]
         pmax=max(plist)
         max_index=plist.index(pmax)
-        a = self.lcd.display(self.img, oft=(40,0))
+        self.lcd.display(self.img, oft=(40,0))
         self.kpu.fmap_free(pmax)
         if(pmax>0.7):
             self.lcd.draw_string(240, 0, "id:%s"%(self.labels[max_index].strip()), self.lcd.GREEN)
@@ -41,16 +44,13 @@ class Guidepost(object):
         print('kpu.deinit:{}'.format(a))
         del self.task
         del self.fmap
-        # del self.img
-        # del self.lcd
-        # del self.sensor
-        # del self.kpu
+   
         gc.collect()
 
     def change_camera(self, choice):
         try:
-            # self.sensor.reset(choice=choice)
-            self.sensor.reset(freq=18000000)
+            self.sensor.reset()
+            # self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
             self.sensor.set_windowing((192, 192))
@@ -70,7 +70,7 @@ class Guidepost(object):
         
         self.sensor.skip_frames(30)
         self.sensor.run(1)
-        time.sleep(1)
+        time.sleep(0.1)
 
 # t = Guidepost(1)
 # while 1:

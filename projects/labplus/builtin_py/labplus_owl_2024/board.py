@@ -3,6 +3,7 @@ from Maix import GPIO
 from machine import Timer
 import time
 import uerrno
+from modules import ws2812
 
 class LED():
     """LED K210引脚控制的LED,默认使用Pinx与对应的GPIOHSx驱动
@@ -235,3 +236,22 @@ class button:
         ret = self.pressed
         self.pressed = 0
         return ret
+
+
+class RGB():
+    """K210引脚控制的RGB, WS2812灯带
+    """
+    def __init__(self, pin,  num):
+        self.rgb = ws2812(pin,num)
+        self.num = num
+
+    def set_led(self,r,g,b):
+        for i in range(self.num):
+            self.rgb.set_led(i,(r,g,b))
+        self.rgb.display()
+
+    def off(self):
+        for i in range(self.num):
+            self.rgb.set_led(i,(0,0,0))
+        self.rgb.display()
+

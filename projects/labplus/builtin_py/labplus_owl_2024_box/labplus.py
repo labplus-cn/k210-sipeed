@@ -46,6 +46,7 @@ COLOR_EXTRACTO_MODE=14 # LAB颜色提取器
 APRILTAG_MODE=15
 KPU_YOLO_MODEL_MODE = 16 #自定义YOLO模型
 VIDEO_MODE = 20
+FACTORY_MODE = 99
 
 
 class AICamera(object):
@@ -87,6 +88,12 @@ class AICamera(object):
             self.flag_apriltag_recognize = 0
             #
             self.flag_kpu_yolol_recognize = 0
+            #工厂测试
+            self.lcd_test = False
+            self.sensor_test = False
+            self.button_test = False
+            self.light_test = False
+            self.sd_test = False
             
     def __init__(self):
         # fm.register(32, fm.fpioa.UART2_TX, force=True)
@@ -100,7 +107,7 @@ class AICamera(object):
         self.kpu = kpu
         self.sensor = sensor
           
-        self.lcd.init(freq=18000000)
+        self.lcd.init(freq=15000000)
         self.lcd.direction(0x28)
         self.lcd.mirror(True)
         self.lcd.rotation(1)
@@ -111,15 +118,18 @@ class AICamera(object):
         except Exception as e:
             self.lcd.clear(lcd.BLUE)
             self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera", lcd.WHITE, lcd.BLUE) 
-            time.sleep(3)
+            time.sleep(1)
 
         self.change_camera(_choice=1)
 
         # button
-        self.btn_A = button(16)
-        self.btn_B = button(17)
+        self.btn_A = button(12,False)
+        self.btn_B = button(13,False)
+        self.btn_A_status = 0
+        self.btn_B_status = 0
         time.sleep(0.1)
-
+        # TF卡状态
+        self.tf_status = False
         # k210 flag
         self.k210 = self.K210()
         self.slc = None
@@ -208,7 +218,7 @@ class AICamera(object):
             time.sleep_ms(10)
             if(self.uart.any()):
                 head=self.uart.read(2)
-                print(head)
+                # print(head)
                 if(head and head[0]==0xAA and head[1]==0xBB):
                     cmd_type = self.uart.read(1)
                     if(cmd_type[0]==0x01):
@@ -291,6 +301,14 @@ class AICamera(object):
                     self.init_canvas()
                 elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x02):
                     self.clear_canvas()
+                elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x01):
+                    self.k210.mode = FACTORY_MODE
+                    if self.sd_test():
+                        self.tf_status = 1
+                elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x02):
+                    self.k210.lcd_test = True
+                elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x03):
+                    self.k210.sensor_test = True
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
                     self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
@@ -635,7 +653,8 @@ class AICamera(object):
                             self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[0xff])
                         else:
                             id,info = tmp
-                            self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[id])
+                            _str = str([id,info])
+                            self.AI_Uart_CMD_String(cmd=0x08,cmd_type=0x03,str_buf=_str)
                         # self.k210.flag_qrcode_recognize=0
                 elif(self.k210.mode==SPEECH_RECOGNIZATION_MODE and self.asr!=None):
                     if(self.k210.flag_asr_recognize):
@@ -711,6 +730,13 @@ class AICamera(object):
                             self.AI_Uart_CMD(0x01,0x10,0x03,cmd_data=[0xff])
                         else:
                             self.AI_Uart_CMD(0x01,0x10,0x03,cmd_data=[id,value])
+                elif(self.k210.mode==FACTORY_MODE):
+                    self.button_update_status()
+                    if(self.k210.lcd_test):
+                        self.lcd_test()
+                    elif(self.k210.sensor_test):
+                        self.sensor_test()
+                    self.AI_Uart_CMD(0x01,FACTORY_MODE,0x01,cmd_data=[self.btn_A_status,self.btn_B_status,self.tf_status])
             except Exception as e:
                 s=str(e)
                 print(s)
@@ -792,23 +818,23 @@ class AICamera(object):
         self.sensor.run(1)
         time.sleep(0.1)
 
-    def record(self, choice=1, path="/sd/capture.avi", interval=100000, quality=50, width=320, height=240, duration=10):
+    def record(self, choice=1, path="/sd/capture.avi", interval=100000, quality=50, width=240, height=240, duration=10):
         self.lcd.init(freq=15000000, invert=1)
-        self.sensor.reset(choice=choice)
+        self.sensor.reset()
         self.sensor.set_pixformat(sensor.RGB565)
         self.sensor.set_framesize(sensor.QVGA)
         self.sensor.set_windowing((width, height))
-        self.sensor.set_hmirror(1)
-        self.sensor.set_vflip(1)
-        if(choice==1 and self.sensor.get_id()==0x2642):
-            self.sensor.set_vflip(1)
-            self.sensor.set_hmirror(1)
-        elif(choice==1 and self.sensor.get_id()==0x5640):
-            self.sensor.set_vflip(0)
-            self.sensor.set_hmirror(0)
-        else:
-            self.sensor.set_vflip(0)
-            self.sensor.set_hmirror(0)
+        # self.sensor.set_hmirror(1)
+        # self.sensor.set_vflip(1)
+        # if(choice==1 and self.sensor.get_id()==0x2642):
+        #     self.sensor.set_vflip(1)
+        #     self.sensor.set_hmirror(1)
+        # elif(choice==1 and self.sensor.get_id()==0x5640):
+        #     self.sensor.set_vflip(0)
+        #     self.sensor.set_hmirror(0)
+        # else:
+        #     self.sensor.set_vflip(0)
+        #     self.sensor.set_hmirror(0)
 
         self.sensor.run(1)
         self.sensor.skip_frames(30) 
@@ -863,21 +889,69 @@ class AICamera(object):
         self.lcd.clear()
     
     def init_canvas(self):
-        self.lcd.clear(lcd.WHITE)
+        # self.lcd.clear(lcd.WHITE)
         self.img =  image.Image('/flash/white320.jpg', copy_to_fb=True)
+        self.img =  image.Image().invert()
     
     def clear_canvas(self):
-        self.img =  image.Image('/flash/white320.jpg', copy_to_fb=True)
+        # self.img =  image.Image('/flash/white320.jpg', copy_to_fb=True)
+        self.lcd.clear(lcd.WHITE)
  
     def canvas_txt(self,txt,scale,x,y):
-        Draw_CJK_String(txt, x, y, self.img, color=(0, 0, 0))
+        # Draw_CJK_String(txt, x, y, self.img, color=(0, 0, 0))
+        image.font_load(image.UTF8,16,16,0x645000)
+        self.img.draw_string(x,y,txt,color=(0,0,0),scale=scale,x_spacing=2,mono_space=1)
+        image.font_free()
         self.lcd.display(self.img)
+
+    def sd_test(self):
+        import os
+        flag = False
+        flag_sd = False
+
+        for v in os.listdir('/'):
+            if v == 'sd':
+                flag_sd = True
+                with open("/sd/_sd.txt", "w") as f:
+                    f.close()
+
+        if flag_sd:
+            for v in os.listdir('/sd'):
+                if v == '_sd.txt':
+                    flag = True
+
+        return flag
+    
+    def lcd_test(self):
+        self.k210.sensor_test = False
+        COLOR = [lcd.WHITE,lcd.BLACK,lcd.RED,lcd.GREEN,lcd.BLUE]
+        for i in range(5):
+            self.lcd.clear(COLOR[i])
+            time.sleep(1)
+        self.k210.lcd_test = False
+
+    def sensor_test(self):
+        self.lcd.display(self.sensor.snapshot())
+
+    def light_test(self):
+            for i in range(2):
+                self.led.on()
+                self.rgb.set_led(0,128,0) 
+                time.sleep(1)
+                self.led.off()
+                self.rgb.off()
+
+    def button_update_status(self):
+        self.btn_A_status = self.btn_A.is_pressed()
+        self.btn_B_status = self.btn_B.is_pressed() 
+        # return self.btn_A.is_pressed(),self.btn_B.is_pressed()
+
     
 try:
     aiCamera=AICamera()
 except Exception as e:
     lcd.clear((0, 0, 255))
-    s=str(e)
-    lcd.draw_string(0,200, s, lcd.WHITE, lcd.BLUE)
-    if(len(s)>20):
-        lcd.draw_string(0,220, s[21:-1], lcd.WHITE, lcd.BLUE)
+    # s=str(e)
+    # lcd.draw_string(0,200, s, lcd.WHITE, lcd.BLUE)
+    # if(len(s)>20):
+    #     lcd.draw_string(0,220, s[21:-1], lcd.WHITE, lcd.BLUE)

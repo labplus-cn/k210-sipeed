@@ -174,7 +174,7 @@ class AICamera(object):
         # self.uart.write(bytes([check_sum & 0xFF]))
         CMD_TEMP.append(check_sum & 0xFF)
         self.uart.write(bytes(CMD_TEMP))
-        self.print_x16(CMD_TEMP)
+        # self.print_x16(CMD_TEMP)
         
     def AI_Uart_CMD_String(self,cmd=0x00, cmd_type=0x00, cmd_data=[0x00], str_len=0, str_buf=''):
         # check_sum = 0
@@ -191,8 +191,8 @@ class AICamera(object):
         # self.uart.write(bytes([check_sum & 0xff]))   
         CMD = bytes(CMD) + bytes([str_len]) + str_temp + bytes([0xAB])
         self.uart.write(CMD)   
-        self.print_x16(CMD)
-        print('='*8)
+        # self.print_x16(CMD)
+        # print('='*8)
     
     def print_x16(self,date):
         for i in range(len(date)):
@@ -610,7 +610,9 @@ class AICamera(object):
                             self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[0xff])
                         else:
                             id,info = tmp
-                            self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[id])
+                            _str = str([id,info])
+                            # self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[id])
+                            self.AI_Uart_CMD_String(cmd=0x08,cmd_type=0x03,str_buf=_str)
                         # self.k210.flag_qrcode_recognize=0
                 elif(self.k210.mode==SPEECH_RECOGNIZATION_MODE and self.asr!=None):
                     if(self.k210.flag_asr_recognize):

@@ -51,11 +51,11 @@ class QRCode(object):
                         # print(self.QRCodeName)
                         self.index = -1
                         self.flag_add = 0
-                        del img
                         gc.collect()
                         # break
                 # break 
-        a = self.lcd.display(img)
+        self.lcd.display(img)
+        del img
         gc.collect()     
             
     def recognize(self):
@@ -84,12 +84,13 @@ class QRCode(object):
     def change_camera(self, choice):
         try:
             # self.sensor.reset(choice=choice)  
-            self.sensor.reset(freq=18000000)
+            self.sensor.reset(freq=24000000)
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         self.sensor.set_framesize(self.sensor.QVGA)
         self.sensor.set_pixformat(self.sensor.RGB565)
+        self.sensor.set_windowing((240,240))
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)
@@ -146,6 +147,7 @@ class Apriltag(object):
         #不可修改
         self.sensor.set_auto_gain(False)
         self.sensor.set_auto_whitebal(False)
+        self.sensor.set_windowing((240,240))
         # if(self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)

@@ -27,7 +27,7 @@ class Color(object):
     
     def change_camera(self, choice):
         try:
-            self.sensor.reset(freq=18000000)
+            self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
             # self.sensor.set_hmirror(1)

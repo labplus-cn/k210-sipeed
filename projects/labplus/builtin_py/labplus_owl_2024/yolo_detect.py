@@ -40,9 +40,10 @@ class YOLO_DETECT(object):
 
     def change_camera(self, choice):
         try:
-            self.sensor.reset(freq=18000000)
+            self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
+            self.sensor.set_windowing((320,240))
             # self.sensor.set_hmirror(1)
         except Exception as e:
             self.lcd.clear((0, 0, 255))
