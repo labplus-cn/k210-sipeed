@@ -6,7 +6,7 @@ from fpioa_manager import fm
 from display import Draw_CJK_String
 
 class QRCode(object):
-    def __init__(self, lcd=None, sensor=None, choice=1):
+    def __init__(self, lcd=None, sensor=None):
         self.lcd = lcd
         self.sensor = sensor
         self.QRCodeName = []
@@ -14,10 +14,10 @@ class QRCode(object):
         self.init_data()
         self.load_data()
 
-        fm.register(12, fm.fpioa.GPIOHS0, force=True)
+        fm.register(13, fm.fpioa.GPIOHS0, force=True)
         self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
 
-        self.change_camera(choice=choice)
+        self.change_camera()
         time.sleep(1)
         self.index = -1
         self.flag_add = 0
@@ -30,12 +30,12 @@ class QRCode(object):
         # while True:add_face
         img = self.sensor.snapshot()
         res = img.find_qrcodes()
-        Draw_CJK_String('按A键添加二维码数据id:', 5, 5, img, color=(0, 128, 0))
+        Draw_CJK_String('按S1键添加二维码数据id:', 45, 5, img, color=(0, 128, 0))
         if len(res)>0:
             gc.collect()
             img.draw_rectangle(res[0].rect(), color=(0,255,0))
-            Draw_CJK_String('按A键添加二维码数据id:{0}'.format(self.index+1), 5, 5, img, color=(0, 128, 0))
-            Draw_CJK_String('二维码数据：{0}'.format(res[0].payload()), 5, 18, img, color=(0, 128, 0))
+            Draw_CJK_String('按S1键添加二维码数据id:{0}'.format(self.index+1), 45, 5, img, color=(0, 128, 0))
+            Draw_CJK_String('二维码数据：{0}'.format(res[0].payload()), 45, 18, img, color=(0, 128, 0))
             if self.key.value() == 0:
                 time.sleep_ms(30)
                 if self.key.value() == 0:
@@ -43,8 +43,8 @@ class QRCode(object):
                     info = res[0].payload()
                     self.save_data(info)
                     self.QRCodeName.append(info)
-                    Draw_CJK_String('已添加二维码, id:{0}'.format(self.index), 5, 30, img, color=(0, 0, 128))
-                    Draw_CJK_String('二维码数据: {0}'.format(info), 5, 43, img, color=(0, 0, 128))
+                    Draw_CJK_String('已添加二维码, id:{0}'.format(self.index), 45, 30, img, color=(0, 0, 128))
+                    Draw_CJK_String('二维码数据: {0}'.format(info), 45, 43, img, color=(0, 0, 128))
                     self.lcd.display(img)
                     time.sleep(3)
                     if self.index >= num-1:
@@ -61,7 +61,7 @@ class QRCode(object):
     def recognize(self):
         img = self.sensor.snapshot()
         res = img.find_qrcodes()
-        Draw_CJK_String('识别中...', 5, 5, img, color=(0, 128, 0))
+        Draw_CJK_String('识别中...', 45, 5, img, color=(0, 128, 0))
         index =  None
         info = None
         if len(res)>0:
@@ -74,22 +74,22 @@ class QRCode(object):
                         index = j
                         info = i.payload()
                         Draw_CJK_String('ID：{0}'.format(j), i.x(), i.y()-15, img, color=(0, 128, 0))
-                Draw_CJK_String('二维码数据: {0}'.format(info), 5, 18, img, color=(0, 128, 0))
+                Draw_CJK_String('二维码数据: {0}'.format(info), 45, 18, img, color=(0, 128, 0))
                 # break 
         a = self.lcd.display(img)
         del img
         gc.collect()    
         return index,info #否则返回None
     
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
-            # self.sensor.reset(choice=choice)  
-            self.sensor.reset(freq=20000000)
+            self.sensor.reset(freq=24000000)
             self.sensor.set_framesize(self.sensor.QVGA)
             self.sensor.set_pixformat(self.sensor.RGB565)
-            self.sensor.set_vflip(1)
-            self.sensor.set_windowing((240,240))
-            self.sensor.set_brightness(-1) #亮度
+            # self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(0)
+            # self.sensor.set_windowing((240,240))
+            # self.sensor.set_brightness(0) #亮度
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
@@ -148,6 +148,7 @@ class Apriltag(object):
         self.lcd = lcd
         self.sensor = sensor
         #不可修改
+        # self.sensor.set_windowing((240,240))
         self.sensor.set_auto_gain(False)
         self.sensor.set_auto_whitebal(False)
         # if(self.sensor.get_id()==0x2642):

@@ -6,7 +6,7 @@ from fpioa_manager import fm
 from display import Draw_CJK_String
 
 class Color(object):
-    def __init__(self, lcd=None, sensor=None, choice=1):
+    def __init__(self, lcd=None, sensor=None):
         self.lcd = lcd
         self.sensor = sensor
         self.roi = [135,95,60,60]
@@ -15,24 +15,25 @@ class Color(object):
         self.threshold_list = []
         self.color_file_exits = 0
 
-        fm.register(12, fm.fpioa.GPIOHS0, force=True)
+        fm.register(13, fm.fpioa.GPIOHS0, force=True)
         self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
 
-        self.change_camera(choice=choice)
+        self.change_camera()
         self.init_data()
         self.load_data()
         time.sleep(3)
         self.index = -1
         self.flag_add = 0
     
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
-            self.sensor.reset(freq=20000000)
+            self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(0)
+            # self.sensor.set_vflip(1)
             self.sensor.set_windowing((240,240))
-            self.sensor.set_brightness(-1) #亮度
+            # self.sensor.set_brightness(-1) #亮度
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
@@ -76,7 +77,7 @@ class Color(object):
         statistics = color.get_statistics()
         LAB = (statistics.l_min(),statistics.l_max(),statistics.a_min(),statistics.a_max(),statistics.b_min(),statistics.b_max())
 
-        Draw_CJK_String('按A键按顺序添加需识别颜色,颜色区域在中心框', 5, 5, img, color=(0, 128, 0))
+        Draw_CJK_String('按S1键按顺序添加需识别颜色,颜色区域在中心框', 5, 5, img, color=(0, 128, 0))
         # Draw_CJK_String('', 5, 20, img, color=(0, 128, 0))
         if self.key.value() == 0:
             time.sleep_ms(30)

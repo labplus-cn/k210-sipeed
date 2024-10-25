@@ -14,7 +14,7 @@ from face_recognization import *
 from mnist import *
 from yolo_detect import *
 from face_detect import *
-# from speech_recognizition import speech_recognize
+from speech_recognizition import speech_recognize
 from color import *
 from qrcode import *
 from guidepost import *
@@ -23,7 +23,7 @@ from track import *
 
 from display import Draw_CJK_String
 import video
-utils.gc_heap_size(0x60000) 
+utils.gc_heap_size(0x90000) 
 """ 
 -------------------------------------------------------------------------------------------------------
 盛思OWL初始化
@@ -47,7 +47,6 @@ APRILTAG_MODE=15
 KPU_YOLO_MODEL_MODE = 16 #自定义YOLO模型
 VIDEO_MODE = 20
 FACTORY_MODE = 99
-
 
 class AICamera(object):
     class K210:
@@ -93,7 +92,7 @@ class AICamera(object):
             self.sensor_test = False
             self.button_test = False
             self.light_test = False
-            self.sd_test = False
+            # self.sd_test = False
             
     def __init__(self):
         fm.register(11, fm.fpioa.UART2_TX, force=True)
@@ -118,7 +117,7 @@ class AICamera(object):
             self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera", lcd.WHITE, lcd.BLUE) 
             time.sleep(1)
 
-        self.change_camera(_choice=1)
+        self.change_camera()
 
         # button
         self.btn_A = button(12,False)
@@ -128,7 +127,7 @@ class AICamera(object):
         time.sleep(0.1)
 
         # TF卡状态
-        self.tf_status = False
+        self.tf_status = 0
 
         # k210 flag
         self.k210 = self.K210()
@@ -185,10 +184,9 @@ class AICamera(object):
         for i in range(len(CMD_TEMP)):
             check_sum = check_sum+CMD_TEMP[i]
         
-        # self.uart.write(bytes(CMD_TEMP))
-        # self.uart.write(bytes([check_sum & 0xFF]))
         CMD_TEMP.append(check_sum & 0xFF)
         self.uart.write(bytes(CMD_TEMP))
+        del CMD_TEMP
         # self.print_x16(CMD_TEMP)
         
     def AI_Uart_CMD_String(self,cmd=0x00, cmd_type=0x00, cmd_data=[0x00], str_len=0, str_buf=''):
@@ -205,7 +203,7 @@ class AICamera(object):
         CMD = bytes(CMD) + bytes([str_len]) + str_temp + bytes([0xAB])
         self.uart.write(CMD)   
         # self.print_x16(CMD)
-        # print('='*8)
+        # print('='*5)
     
     def print_x16(self,date):
         for i in range(len(date)):
@@ -305,25 +303,31 @@ class AICamera(object):
                     self.k210.mode = FACTORY_MODE
                     if self.sd_test():
                         self.tf_status = 1
+                    else:
+                        self.tf_status = 0
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x02):
                     self.k210.lcd_test = True
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x03):
                     self.k210.sensor_test = True
+                elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x04):
+                    self.rgb_test()
+                elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x05):
+                    self.led_test()
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
                     self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
                     self.k210.mode = MNIST_MODE
-                    self.mnist = MNIST(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
+                    self.mnist = MNIST(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x02):
                     self.k210.flag_mnist_recognize = 1
                 elif(CMD[3]==OBJECT_RECOGNIZATION_MODE and CMD[4]==0x01):
                     self.k210.mode = OBJECT_RECOGNIZATION_MODE
-                    self.yolo_detect = YOLO_DETECT(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
+                    self.yolo_detect = YOLO_DETECT(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
                 elif(CMD[3]==OBJECT_RECOGNIZATION_MODE and CMD[4]==0x02):
                     self.k210.flag_yolo_recognize = 1
                 elif(CMD[3]==FACE_DETECTION_MODE and CMD[4]==0x01):
                     self.k210.mode = FACE_DETECTION_MODE
-                    self.face_detect = FACE_DETECT(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
+                    self.face_detect = FACE_DETECT(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
                 elif(CMD[3]==FACE_DETECTION_MODE and CMD[4]==0x02):
                     self.k210.flag_face_detection = 1
                 elif(CMD[3]==FACE_RECOGNIZATION_MODE and CMD[4]==0x01):
@@ -331,7 +335,7 @@ class AICamera(object):
                     _choice=CMD[7]
                     _face_num=CMD[5]
                     _accuracy=CMD[6]
-                    self.fac=Face_recognization(choice=_choice, sensor=self.sensor, kpu=self.kpu, lcd=self.lcd, face_num=_face_num, accuracy=_accuracy)
+                    self.fac=Face_recognization(sensor=self.sensor, kpu=self.kpu, lcd=self.lcd, face_num=_face_num, accuracy=_accuracy)
                 elif(CMD[3]==0x05 and CMD[4]==0x02):
                     self.k210.flag_add = 1
                     self.fac.tmp_num = 0
@@ -343,7 +347,7 @@ class AICamera(object):
                 elif(CMD[3]==SELF_LEARNING_CLASSIFIER_MODE and CMD[4]==0x01):
                     self.k210.mode = SELF_LEARNING_CLASSIFIER_MODE
                     _choice=CMD[7];_class_num=CMD[5];_sample_num=CMD[6]
-                    self.slc=Self_learning_classifier(choice=_choice, sensor=self.sensor, kpu=self.kpu, lcd=self.lcd, class_num=_class_num, sample_num=_sample_num)
+                    self.slc=Self_learning_classifier(sensor=self.sensor, kpu=self.kpu, lcd=self.lcd, class_num=_class_num, sample_num=_sample_num)
                 elif(CMD[3]==SELF_LEARNING_CLASSIFIER_MODE and CMD[4]==0x02):
                     if(self.slc!=None):
                         self.slc.flag_add_class = 1
@@ -359,7 +363,7 @@ class AICamera(object):
                 #     self.k210.flag_asr_recognize=1
                 elif(CMD[3]==COLOE_MODE and CMD[4]==0x01):
                     self.k210.mode = COLOE_MODE
-                    self.color = Color(choice=CMD[5],sensor=self.sensor,lcd=self.lcd)
+                    self.color = Color(sensor=self.sensor,lcd=self.lcd)
                 elif(CMD[3]==COLOE_MODE and CMD[4]==0x02):
                     self.k210.flag_color_add = CMD[5]
                     self.color.flag_add = 1
@@ -369,7 +373,7 @@ class AICamera(object):
                         self.k210.flag_color_recognize = 1
                 elif(CMD[3]==QRCODE_MODE and CMD[4]==0x01):
                     self.k210.mode = QRCODE_MODE
-                    self.qrcode = QRCode(choice=CMD[5],sensor=self.sensor,lcd=self.lcd)
+                    self.qrcode = QRCode(sensor=self.sensor,lcd=self.lcd)
                 elif(CMD[3]==QRCODE_MODE and CMD[4]==0x02):
                     self.k210.flag_qrcode_add = CMD[5]
                     self.qrcode.flag_add = 1
@@ -379,7 +383,7 @@ class AICamera(object):
                         self.k210.flag_qrcode_recognize = 1
                 elif(CMD[3]==GUIDEPOST_MODE and CMD[4]==0x01):
                     self.k210.mode = GUIDEPOST_MODE
-                    self.guidepost = Guidepost(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
+                    self.guidepost = Guidepost(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
                 elif(CMD[3]==GUIDEPOST_MODE and CMD[4]==0x02):
                     self.k210.flag_guidepost_recognize = 1
                 elif(CMD[3]==KPU_MODEL_MODE and CMD[4]==0x01):
@@ -387,7 +391,7 @@ class AICamera(object):
                 elif(CMD[3]==KPU_MODEL_MODE and CMD[4]==0x03):
                     self.k210.flag_kpu_recognize = 1
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x01):
-                    self.change_camera(_choice=CMD[5],_framesize=self._framesize,_pixformat=self._pixformat,_w=self._w,_h=self._h,_vflip=self._vflip,_hmirror=self._hmirror,_brightness=self._brightness,_contrast=self._contrast,_saturation=self._saturation,_gain=self._gain,_whitebal=self._whitebal)
+                    self.change_camera(_framesize=self._framesize,_pixformat=self._pixformat,_w=self._w,_h=self._h,_vflip=self._vflip,_hmirror=self._hmirror,_brightness=self._brightness,_contrast=self._contrast,_saturation=self._saturation,_gain=self._gain,_whitebal=self._whitebal)
                     self.track = Track(lcd=self.lcd,sensor=self.sensor)
                     self.k210.mode = TRACK_MODE
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x02 and self.track!=None):
@@ -395,9 +399,9 @@ class AICamera(object):
                 elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x01):
                     self.k210.mode = COLOR_STATISTICS_MODE
                     if(int(CMD[5])==1):
-                        self.change_camera(_choice=1,_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_w=160,_h=120,_freq=24000000,_dual_buff=True)
+                        self.change_camera(_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_w=160,_h=120,_freq=24000000,_dual_buff=True)
                     else:
-                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=24000000,_dual_buff=True)
+                        self.change_camera(_framesize=sensor.QQVGA,_pixformat=sensor.GRAYSCALE,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=24000000,_dual_buff=True)
                     self.color_statistics = Color_Statistics(lcd=self.lcd,sensor=self.sensor)  
                 elif(CMD[3]==COLOR_STATISTICS_MODE and CMD[4]==0x02 and self.color_statistics!=None ):
                     self.k210.flag_color_statistics_recognize = 1                               
@@ -408,18 +412,18 @@ class AICamera(object):
                 elif(CMD[3]==COLOR_EXTRACTO_MODE and CMD[4]==0x01):
                     self.k210.mode = COLOR_EXTRACTO_MODE
                     if(int(CMD[5])==1):
-                        self.change_camera(_choice=1,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_w=160,_h=120,_freq=24000000,_dual_buff=True,_whitebal=False)
+                        self.change_camera(_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_w=160,_h=120,_freq=24000000,_dual_buff=True,_whitebal=False)
                     else:
-                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=24000000,_dual_buff=True,_brightness=-1,_whitebal=False)
+                        self.change_camera(_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=24000000,_dual_buff=True,_brightness=-1,_whitebal=False)
                     self.color_ex = Color_Extractor(lcd=self.lcd,sensor=self.sensor)  
                 elif(CMD[3]==COLOR_EXTRACTO_MODE and CMD[4]==0x02 and self.color_ex!=None ):
                     self.k210.flag_color_ex_recognize = 1                  
                 elif(CMD[3]==APRILTAG_MODE and CMD[4]==0x01):
                     self.k210.mode = APRILTAG_MODE
                     if(int(CMD[5])==1):
-                        self.change_camera(_choice=1,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_w=160,_h=120,_freq=24000000,_dual_buff=True,_whitebal=False)
+                        self.change_camera(_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_w=160,_h=120,_freq=24000000,_dual_buff=True,_whitebal=False)
                     else:
-                        self.change_camera(_choice=2,_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=24000000,_dual_buff=True,_whitebal=False)
+                        self.change_camera(_framesize=sensor.QQVGA,_pixformat=sensor.RGB565,_vflip=0,_hmirror=0,_w=160,_h=120,_freq=24000000,_dual_buff=True,_whitebal=False)
                     self.apriltag = Apriltag(lcd=self.lcd,sensor=self.sensor)  
                 elif(CMD[3]==APRILTAG_MODE and CMD[4]==0x02 and self.apriltag!=None ):
                     self.k210.flag_apriltag_recognize = 1                  
@@ -454,7 +458,7 @@ class AICamera(object):
                     data = _str.split("|")
                     print(data)
                     self.k210.mode = KPU_MODEL_MODE
-                    self.kpu_model = KPU_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]))
+                    self.kpu_model = KPU_KMODEL(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]))
                 elif(CMD[3]==TRACK_MODE and CMD[4]==0x03):
                     time.sleep(0.05)
                     str_temp = bytes(CMD[9:-1])
@@ -503,14 +507,14 @@ class AICamera(object):
                     # print(data)
                     choice=CMD[5]
                     quality=CMD[6]
-                    self.record(choice=choice,path=data[0], interval=int(data[1]), quality=quality, width=int(data[2]), height=int(data[3]), duration=int(data[4]))
+                    self.record(path=data[0], interval=int(data[1]), quality=quality, width=int(data[2]), height=int(data[3]), duration=int(data[4]))
                 elif(CMD[3]==KPU_YOLO_MODEL_MODE and CMD[4]==0x02):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
                     data = _str.split("|")
                     print(data)
                     self.k210.mode = KPU_YOLO_MODEL_MODE
-                    self.kpu_yolo_model = KPU_YOLO_KMODEL(choice=CMD[5],sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]),anchors=eval(data[3]))
+                    self.kpu_yolo_model = KPU_YOLO_KMODEL(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]),anchors=eval(data[3]))
                 elif(CMD[3]==DEFAULT_MODE and CMD[4]==0xFA):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
@@ -520,7 +524,8 @@ class AICamera(object):
                     scale = CMD[5]
                     x = data[0]
                     y = data[1]
-                    txt = data[2]
+                    # txt = data[2]
+                    txt = bytes(str(data[2]),'utf-8')
 
                     self.canvas_txt(txt,scale,x,y)
                     
@@ -794,7 +799,7 @@ class AICamera(object):
         self.kpu.memtest()
   
 
-    def change_camera(self,_choice=1,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=0,_hmirror=0,_brightness=-1,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
+    def change_camera(self,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=0,_hmirror=0,_brightness=-1,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
         try:
             # self.sensor.reset(choice=_choice,freq=_freq,dual_buff=_dual_buff)
             self.sensor.reset(freq=_freq,dual_buff=_dual_buff)
@@ -817,7 +822,7 @@ class AICamera(object):
         self.sensor.run(1)
         time.sleep(0.1)
 
-    def record(self, choice=1, path="/sd/capture.avi", interval=100000, quality=50, width=240, height=240, duration=10):
+    def record(self, path="/sd/capture.avi", interval=100000, quality=50, width=240, height=240, duration=10):
         self.lcd.init(freq=15000000, invert=1)
         self.sensor.reset()
         self.sensor.set_pixformat(sensor.RGB565)
@@ -835,12 +840,12 @@ class AICamera(object):
         while True:
             time.sleep_ms(20)
             img = self.sensor.snapshot()
-            Draw_CJK_String('按A键开始录制', 5, 5, img, color=(0, 255, 0))
+            Draw_CJK_String('按A键开始录制', 40, 5, img, color=(0, 255, 0))
             self.lcd.display(img)
             if key.value() == 0:
                 time.sleep_ms(30)
                 if key.value() == 0:
-                    Draw_CJK_String('开始录制', 5, 20, img, color=(0, 255, 0))
+                    Draw_CJK_String('开始录制', 40, 20, img, color=(0, 255, 0))
                     self.lcd.display(img)
                     time.sleep_ms(500)
                     break
@@ -879,12 +884,12 @@ class AICamera(object):
     def init_canvas(self):
         # self.lcd.init(freq=15000000, invert=0)
         # self.lcd.clear(lcd.WHITE)
-        # self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
-        self.img =  image.Image().invert()
+        self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
+        # self.img =  image.Image().invert()
     
     def clear_canvas(self):
-        # self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
-        self.lcd.clear(lcd.WHITE)
+        self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
+        # self.lcd.clear(lcd.WHITE)
  
     def canvas_txt(self,txt,scale,x,y):
         # Draw_CJK_String(txt, x, y, self.img, color=(0, 0, 0))
@@ -922,13 +927,17 @@ class AICamera(object):
     def sensor_test(self):
         self.lcd.display(self.sensor.snapshot())
 
-    def light_test(self):
-            for i in range(2):
-                self.led.on()
-                self.rgb.set_led(0,128,0) 
-                time.sleep(1)
-                self.led.off()
-                self.rgb.off()
+    def rgb_test(self):
+        for i in range(2):
+            self.rgb.set_led(0,128,0) 
+            time.sleep(1)
+            self.rgb.off()
+    
+    def led_test(self):
+        for i in range(2):
+            self.led.on()
+            time.sleep(1)
+            self.led.off()
 
     def button_update_status(self):
         self.btn_A_status = self.btn_A.is_pressed()
@@ -940,6 +949,6 @@ except Exception as e:
     lcd.clear((0, 0, 255))
     s=str(e)
     print(s)
-    # lcd.draw_string(0,200, s, lcd.WHITE, lcd.BLUE)
-    # if(len(s)>20):
-    #     lcd.draw_string(0,220, s[21:-1], lcd.WHITE, lcd.BLUE)
+    lcd.draw_string(0,200, s, lcd.WHITE, lcd.BLUE)
+    if(len(s)>20):
+        lcd.draw_string(0,220, s[21:-1], lcd.WHITE, lcd.BLUE)

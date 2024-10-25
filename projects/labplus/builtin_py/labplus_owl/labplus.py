@@ -611,6 +611,7 @@ class AICamera(object):
                         else:
                             id,info = tmp
                             _str = str([id,info])
+
                             # self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[id])
                             self.AI_Uart_CMD_String(cmd=0x08,cmd_type=0x03,str_buf=_str)
                         # self.k210.flag_qrcode_recognize=0

@@ -4,18 +4,18 @@ from Maix import FPIOA, GPIO
 # import KPU as kpu
 
 class MNIST(object):
-    def __init__(self, choice, sensor, lcd, kpu):
+    def __init__(self, sensor, lcd, kpu):
         self.kpu = kpu
         self.lcd = lcd
         self.sensor = sensor
-        self.choice = choice
+        # self.choice = choice
 
         try:
-            self.lcd.init(freq=15000000, invert=1)
-            self.lcd.rotation(1)
+            # self.lcd.init(freq=15000000, invert=1)
+            # self.lcd.rotation(1)
             self.lcd.clear(0,0,0)
             self.task_mnist = self.kpu.load(0x610000)
-            self.change_camera(choice=choice)
+            self.change_camera()
             time.sleep(1)
         except Exception as e:
             self.lcd.draw_string(0,30, "e: " + str(e)[-30:-20], lcd.WHITE, lcd.BLUE) 
@@ -52,15 +52,16 @@ class MNIST(object):
     def __del__(self):
         self.kpu.deinit(self.task_mnist)
 
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
             # self.sensor.reset(choice=choice)  
-            self.sensor.reset(freq=20000000)
+            self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.GRAYSCALE)
             self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_vflip(1)
+            # self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(0)
             self.sensor.set_windowing((240,240))
-            self.sensor.set_brightness(-1) #亮度
+            # self.sensor.set_brightness(-1) #亮度
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 

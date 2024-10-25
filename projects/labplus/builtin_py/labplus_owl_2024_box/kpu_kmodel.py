@@ -2,7 +2,7 @@
 import time
 
 class KPU_KMODEL(object):
-    def __init__(self,choice=1,sensor=None,kpu=None,lcd=None,model=0xc50000,width=128,height=128):
+    def __init__(self,sensor=None,kpu=None,lcd=None,model=0xc50000,width=128,height=128):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
@@ -12,7 +12,7 @@ class KPU_KMODEL(object):
         self.width = width
         self.height = height
 
-        self.change_camera(choice=choice)
+        self.change_camera()
     
     def recognize(self):
         img = self.sensor.snapshot()
@@ -32,15 +32,15 @@ class KPU_KMODEL(object):
     def __del__(self):
         a = self.kpu.deinit(self.task)
 
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
-            # self.sensor.reset(choice=choice)
-            self.sensor.reset(freq=18000000)
+            self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
             self.sensor.set_windowing((self.width, self.height))
-            self.sensor.set_vflip(1)
-            self.sensor.set_brightness(-1) #亮度
+            self.sensor.set_hmirror(0)
+            # self.sensor.set_vflip(1)
+            # self.sensor.set_brightness(-1) #亮度
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
@@ -62,7 +62,7 @@ class KPU_KMODEL(object):
 
 
 class KPU_YOLO_KMODEL(object):
-    def __init__(self, choice=1, sensor=None,kpu=None,lcd=None, model="/sd/m.kmodel", width=128, height=128, anchors=[]):
+    def __init__(self, sensor=None,kpu=None,lcd=None, model="/sd/m.kmodel", width=128, height=128, anchors=[]):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
@@ -72,7 +72,7 @@ class KPU_YOLO_KMODEL(object):
         self.width = width
         self.height = height
         self.anchors = anchors
-        self.change_camera(choice=choice)
+        self.change_camera()
         self.kpu.init_yolo2(self.task, 0.5, 0.3, 5, self.anchors)
 
     def recognize(self):
@@ -97,15 +97,15 @@ class KPU_YOLO_KMODEL(object):
     def __del__(self):
         a = self.kpu.deinit(self.task)
 
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
             self.sensor.reset()
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
             self.sensor.set_windowing((self.width, self.height))
-            self.sensor.set_vflip(1)
-            self.sensor.set_windowing((240,240))
-            self.sensor.set_brightness(-1) #亮度
+            self.sensor.set_hmirror(0)
+            # self.sensor.set_vflip(1)
+            # self.sensor.set_brightness(-1) #亮度
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 

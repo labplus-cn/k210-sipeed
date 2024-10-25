@@ -2,20 +2,19 @@ import time
 import gc
 
 class YOLO_DETECT(object):
-    def __init__(self,choice,sensor,kpu,lcd):
+    def __init__(self,sensor,kpu,lcd):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
-        # self.lcd.init(freq=15000000, invert=1)
-        # self.lcd.rotation(1)
+
         self.clock = time.clock()
         self.classes = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
         self.task = self.kpu.load(0x450000)
         self.anchor = (1.08, 1.19, 3.42, 4.41, 6.63, 11.38, 9.42, 5.11, 16.62, 10.52)
         a = self.kpu.init_yolo2(self.task, 0.5, 0.3, 5, self.anchor)
-        self.change_camera(choice=choice)
+        self.change_camera()
         time.sleep(0.5)
-        self.kpu.memtest()
+        # self.kpu.memtest()
     
     def recognize(self):
         self.clock.tick()
@@ -38,7 +37,7 @@ class YOLO_DETECT(object):
         del self.task
         gc.collect()
 
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
             self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
@@ -52,12 +51,5 @@ class YOLO_DETECT(object):
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)
-        # elif(choice==1 and self.sensor.get_id()==0x5640):
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        # else:
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        
         self.sensor.skip_frames(30)
         self.sensor.run(1)

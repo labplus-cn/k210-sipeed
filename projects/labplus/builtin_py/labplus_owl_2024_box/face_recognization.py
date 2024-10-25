@@ -10,7 +10,7 @@ from display import Draw_CJK_String
 import _thread
 
 class Face_recognization(object):
-    def __init__(self, sensor=None, kpu=None, lcd=None, choice=1, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, face_num=1, accuracy=80):
+    def __init__(self, sensor=None, kpu=None, lcd=None, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, face_num=1, accuracy=80):
         self.kpu = kpu
         self.lcd = lcd
         self.sensor = sensor
@@ -29,7 +29,7 @@ class Face_recognization(object):
         self.names = ['ID:0', 'ID:1', 'ID:2', 'ID:3', 'ID:4',
                 'ID:5', 'ID:6', 'ID:7', 'ID:8', 'ID:9']
 
-        fm.register(12, fm.fpioa.GPIOHS0, force=True)
+        fm.register(13, fm.fpioa.GPIOHS0, force=True)
         self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
 
         a = self.kpu.init_yolo2(self.task_fd, 0.5, 0.3, 5, self.anchor)
@@ -37,7 +37,7 @@ class Face_recognization(object):
         a = self.img_face.pix_to_ai()
         self.record_ftr = []
         self.record_ftrs = []
-        self.change_camera(choice=choice)
+        self.change_camera()
         self.init_data()
         self.load_data()
         time.sleep(3)
@@ -57,7 +57,7 @@ class Face_recognization(object):
             except Exception as e:
                 self.lcd.draw_string(10, 30, '3:'+str(e), self.lcd.WHITE, self.lcd.BLUE)
                 time.sleep(5)
-            Draw_CJK_String('按A键添加人脸数据', 45, 5, img, color=(0, 255, 0))
+            Draw_CJK_String('按S1键添加人脸数据', 45, 5, img, color=(0, 255, 0))
             
             if code:
                 for i in code:
@@ -121,7 +121,7 @@ class Face_recognization(object):
         except Exception as e:
             self.lcd.draw_string(0, 30, '3:'+str(e), self.lcd.WHITE, self.lcd.BLUE)
             time.sleep(5)
-        Draw_CJK_String('按A键添加人脸数据', 45, 5, img, color=(0, 255, 0))
+        Draw_CJK_String('按S1键添加人脸数据', 45, 5, img, color=(0, 255, 0))
         
         if code:
             for i in code:
@@ -245,14 +245,15 @@ class Face_recognization(object):
         gc.collect()    
         return res,max_score # 如果图片跟人脸库中对应人脸相似度大于阈值，返回对应人脸索引号，否则返回None
 
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
-            self.sensor.reset(freq=20000000)
+            self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(0)
+            # self.sensor.set_vflip(1)
             # self.sensor.set_windowing((240,240))
-            self.sensor.set_brightness(-1) #亮度
+            # self.sensor.set_brightness(-1) #亮度
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
@@ -260,13 +261,6 @@ class Face_recognization(object):
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)
-        # elif(choice==1 and self.sensor.get_id()==0x5640):
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        # else:
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        
         self.sensor.skip_frames(30)
         self.sensor.run(1)
 

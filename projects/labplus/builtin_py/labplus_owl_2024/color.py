@@ -6,7 +6,7 @@ from fpioa_manager import fm
 from display import Draw_CJK_String
 
 class Color(object):
-    def __init__(self, lcd=None, sensor=None, choice=1):
+    def __init__(self, lcd=None, sensor=None):
         self.lcd = lcd
         self.sensor = sensor
         self.roi = [135,95,60,60]
@@ -18,14 +18,14 @@ class Color(object):
         fm.register(12, fm.fpioa.GPIOHS0, force=True)
         self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
 
-        self.change_camera(choice=choice)
+        self.change_camera()
         self.init_data()
         self.load_data()
         time.sleep(3)
         self.index = -1
         self.flag_add = 0
     
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
             self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
@@ -74,7 +74,7 @@ class Color(object):
         statistics = color.get_statistics()
         LAB = (statistics.l_min(),statistics.l_max(),statistics.a_min(),statistics.a_max(),statistics.b_min(),statistics.b_max())
 
-        Draw_CJK_String('按A键按顺序添加需识别颜色,颜色区域在中心框', 5, 5, img, color=(0, 128, 0))
+        Draw_CJK_String('按A键按顺序添加需识别颜色,颜色区域在中心框', 40, 5, img, color=(0, 128, 0))
         # Draw_CJK_String('', 5, 20, img, color=(0, 128, 0))
         if self.key.value() == 0:
             time.sleep_ms(30)
@@ -82,7 +82,7 @@ class Color(object):
                 self.index += 1
                 self.threshold_list.append(LAB)
                 self.save_data(LAB)
-                Draw_CJK_String('添加待识别颜色，id：{0}'.format(self.index), 5, 20, img, color=(0, 0, 128))
+                Draw_CJK_String('添加待识别颜色，id：{0}'.format(self.index), 40, 20, img, color=(0, 0, 128))
                 # img.draw_string(5,35, 'L_min:{0},L_max:{1},A_min:{2},A_max:{3},B_min:{4},B_max:{5}'.format(LAB[0],LAB[1],LAB[2],LAB[3],LAB[4],LAB[5]), scale=1) 
                 self.lcd.display(img)
                 time.sleep_ms(3000)
@@ -101,7 +101,7 @@ class Color(object):
     def recognize(self):
         img=self.sensor.snapshot()
         img.draw_rectangle(self.roi,(0,255,0),2,0)
-        Draw_CJK_String('识别中...', 5, 5, img, color=(0, 128, 0))
+        Draw_CJK_String('识别中...', 40, 5, img, color=(0, 128, 0))
         img_roi = img.copy(roi=self.roi)
         id = None
         for i in range(len(self.threshold_list)):
@@ -235,7 +235,7 @@ class Color_Statistics(object):
         # self.img.draw_string(1,1, ("%2.1ffps:"%(fps)), color=(0,128,0),scale=1)
         self.lcd.display(self.img)
         gc.collect()
-        # return 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,_line
+        
         return data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line
 
     def set_up_img_binary(self,binary1,binary2):

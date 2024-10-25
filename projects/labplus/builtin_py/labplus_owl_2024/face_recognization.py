@@ -10,7 +10,7 @@ from display import Draw_CJK_String
 import _thread
 
 class Face_recognization(object):
-    def __init__(self, sensor=None, kpu=None, lcd=None, choice=1, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, face_num=1, accuracy=80):
+    def __init__(self, sensor=None, kpu=None, lcd=None, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, face_num=1, accuracy=80):
         self.kpu = kpu
         self.lcd = lcd
         self.sensor = sensor
@@ -38,7 +38,7 @@ class Face_recognization(object):
         a = self.img_face.pix_to_ai()
         self.record_ftr = []
         self.record_ftrs = []
-        self.change_camera(choice=choice)
+        self.change_camera()
         self.init_data()
         self.load_data()
         time.sleep(3)
@@ -58,7 +58,7 @@ class Face_recognization(object):
             except Exception as e:
                 self.lcd.draw_string(0, 30, '3:'+str(e), self.lcd.WHITE, self.lcd.BLUE)
                 time.sleep(5)
-            Draw_CJK_String('按A键添加人脸数据', 5, 5, img, color=(0, 255, 0))
+            Draw_CJK_String('按A键添加人脸数据', 40, 5, img, color=(0, 255, 0))
             
             if code:
                 for i in code:
@@ -102,7 +102,7 @@ class Face_recognization(object):
                             self.save_data(self.record_ftr)
                             # print("add a face.")
                             # a = img.draw_string(5,15, "Add a face, id={0}".format(tmp_num), color=(0, 255, 0), scale=1)
-                            Draw_CJK_String('添加人脸数据, id={0}'.format(tmp_num), 5, 20, img, color=(0, 255, 0))
+                            Draw_CJK_String('添加人脸数据, id={0}'.format(tmp_num), 40, 20, img, color=(0, 255, 0))
                             self.lcd.display(img)
                             time.sleep(3)
                             tmp_num = tmp_num + 1
@@ -122,7 +122,7 @@ class Face_recognization(object):
         except Exception as e:
             self.lcd.draw_string(0, 30, '3:'+str(e), self.lcd.WHITE, self.lcd.BLUE)
             time.sleep(5)
-        Draw_CJK_String('按A键添加人脸数据', 5, 5, img, color=(0, 255, 0))
+        Draw_CJK_String('按A键添加人脸数据', 40, 5, img, color=(0, 255, 0))
         
         if code:
             for i in code:
@@ -164,7 +164,7 @@ class Face_recognization(object):
                         self.record_ftr = feature
                         self.record_ftrs.append(self.record_ftr)
                         self.save_data(self.record_ftr)
-                        Draw_CJK_String('添加人脸数据, id={0}'.format(self.tmp_num), 10, 20, img, color=(0, 255, 0))
+                        Draw_CJK_String('添加人脸数据, id={0}'.format(self.tmp_num), 40, 20, img, color=(0, 255, 0))
                         self.lcd.display(img)
                         time.sleep(3)
                         self.tmp_num = self.tmp_num + 1
@@ -178,7 +178,7 @@ class Face_recognization(object):
 
     def face_recognize(self):
         img = self.sensor.snapshot()
-        Draw_CJK_String('识别中...', 5, 5, img, color=(0, 255, 0))
+        Draw_CJK_String('识别中...', 40, 5, img, color=(0, 255, 0))
         self.clock.tick()
         code = self.kpu.run_yolo2(self.task_fd, img)
       
@@ -246,12 +246,12 @@ class Face_recognization(object):
         gc.collect()    
         return res,max_score # 如果图片跟人脸库中对应人脸相似度大于阈值，返回对应人脸索引号，否则返回None
 
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
             self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_brightness(-2)
+            # self.sensor.set_brightness(0)
             # self.sensor.set_hmirror(1)
         except Exception as e:
             self.lcd.clear((0, 0, 255))
@@ -260,17 +260,10 @@ class Face_recognization(object):
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)
-        # elif(choice==1 and self.sensor.get_id()==0x5640):
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        # else:
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
         
         self.sensor.skip_frames(30)
         self.sensor.run(1)
 
-    
     #保存数据
     def save_data(self, record_ftr):
         with open("/flash/_face_record_ftrs.txt", "a") as f:

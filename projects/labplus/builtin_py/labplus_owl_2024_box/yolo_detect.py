@@ -2,7 +2,7 @@ import time
 import gc
 
 class YOLO_DETECT(object):
-    def __init__(self,choice,sensor,kpu,lcd):
+    def __init__(self,sensor,kpu,lcd):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
@@ -13,7 +13,7 @@ class YOLO_DETECT(object):
         self.task = self.kpu.load(0x450000)
         self.anchor = (1.08, 1.19, 3.42, 4.41, 6.63, 11.38, 9.42, 5.11, 16.62, 10.52)
         a = self.kpu.init_yolo2(self.task, 0.5, 0.3, 5, self.anchor)
-        self.change_camera(choice=choice)
+        self.change_camera()
         time.sleep(0.5)
         self.kpu.memtest()
     
@@ -38,12 +38,13 @@ class YOLO_DETECT(object):
         del self.task
         gc.collect()
 
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
-            self.sensor.reset(freq=20000000)
+            self.sensor.reset(freq=24000000)
             self.sensor.set_framesize(self.sensor.QVGA)
             self.sensor.set_pixformat(self.sensor.RGB565)
-            self.sensor.set_vflip(1)
+            self.sensor.set_hmirror(0)
+            # self.sensor.set_vflip(1)
             # self.sensor.set_windowing((240,240))
             self.sensor.set_brightness(-1) #亮度
         except Exception as e:

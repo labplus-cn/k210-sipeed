@@ -1,24 +1,22 @@
 from fpioa_manager import *
 import os, Maix, gc, time
-from Maix import FPIOA, GPIO
-# import KPU as kpu
 
 class MNIST(object):
-    def __init__(self, choice, sensor, lcd, kpu):
+    def __init__(self, sensor, lcd, kpu):
         self.kpu = kpu
         self.lcd = lcd
         self.sensor = sensor
-        self.choice = choice
+        # self.choice = choice
 
         try:
             self.lcd.init(freq=15000000, invert=1)
             self.lcd.rotation(1)
             self.lcd.clear(0,0,0)
             self.task_mnist = self.kpu.load(0x610000)
-            self.change_camera(choice=choice)
+            self.change_camera()
             time.sleep(1)
         except Exception as e:
-            self.lcd.draw_string(0,30, "e: " + str(e)[-30:-20], lcd.WHITE, lcd.BLUE) 
+            self.lcd.draw_string(0,20, "e: " + str(e)[-30:-20], lcd.WHITE, lcd.BLUE) 
             self.lcd.draw_string(0,40, "e: " + str(e)[-20:], lcd.WHITE, lcd.BLUE) 
             time.sleep(3)
 
@@ -40,8 +38,8 @@ class MNIST(object):
 
         # print(str(max_index_mnist)+","+str(int(pmax_mnist*100)))
 
-        img_mnist.draw_rectangle(200,0,240,50,color=(0,0,0),fill=True)
-        img_mnist.draw_string(210,3,str(max_index_mnist),color=(255,255,255),scale=4)
+        img_mnist.draw_rectangle(180,0,220,50,color=(0,0,0),fill=True)
+        img_mnist.draw_string(180,3,str(max_index_mnist),color=(255,255,255),scale=4)
         self.lcd.display(img_mnist,oft=(0,0))        #display large picture
 
         gc.collect() 
@@ -52,9 +50,8 @@ class MNIST(object):
     def __del__(self):
         self.kpu.deinit(self.task_mnist)
 
-    def change_camera(self, choice):
+    def change_camera(self):
         try:
-            # self.sensor.reset(choice=choice)  
             self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.GRAYSCALE)
             self.sensor.set_framesize(self.sensor.QVGA)
@@ -67,12 +64,6 @@ class MNIST(object):
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)
-        # elif(choice==1 and self.sensor.get_id()==0x5640):
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        # else:
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
         
         self.sensor.skip_frames(30)
         self.sensor.run(1)
