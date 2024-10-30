@@ -284,8 +284,8 @@ class AICamera(object):
                     self.process_cmd(CMD_TEMP)  
                     # print(str(str_temp.decode('UTF-8','ignore')))
             else:
-                print(head)
-                print('**^**')
+                # print(head)
+                # print('**^**')
                 # del _cmd
                 gc.collect()
 
@@ -823,8 +823,8 @@ class AICamera(object):
         time.sleep(0.1)
 
     def record(self, path="/sd/capture.avi", interval=100000, quality=50, width=240, height=240, duration=10):
-        self.lcd.init(freq=15000000, invert=1)
-        self.sensor.reset()
+        # self.lcd.init(freq=15000000, invert=1)
+        # self.sensor.reset()
         self.sensor.set_pixformat(sensor.RGB565)
         self.sensor.set_framesize(sensor.QVGA)
         self.sensor.set_windowing((width, height))
@@ -882,13 +882,13 @@ class AICamera(object):
         self.lcd.clear()
     
     def init_canvas(self):
-        # self.lcd.init(freq=15000000, invert=0)
-        # self.lcd.clear(lcd.WHITE)
         self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
+        self.lcd.display(self.img)
         # self.img =  image.Image().invert()
     
     def clear_canvas(self):
         self.img =  image.Image('/flash/white240.jpg', copy_to_fb=True)
+        self.lcd.display(self.img)
         # self.lcd.clear(lcd.WHITE)
  
     def canvas_txt(self,txt,scale,x,y):

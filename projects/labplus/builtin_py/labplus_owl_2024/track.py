@@ -34,26 +34,21 @@ class Track(object):
     def __init__(self, lcd=None, sensor=None,  threshold=[[0, 80, 15, 127, 15, 127]], area_threshold=50):
         self.lcd = lcd
         self.sensor = sensor
-        self.lcd.init(freq=15000000, invert=1)
-        self.lcd.rotation(1)
+        # self.lcd.init(freq=15000000, invert=1)
+        # self.lcd.rotation(1)
         self.threshold = threshold
         self.area_threshold = area_threshold
         self.img = None
 
-        self.change_camera()
+        # self.change_camera()
         time.sleep(0.5)
         # self.index = -1
         # self.flag_add = 0
     
     def change_camera(self):
-        try:
-            self.sensor.reset(freq=24000000)
-        except Exception as e:
-            self.lcd.clear((0, 0, 255))
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         self.sensor.set_framesize(self.sensor.QQVGA)
         self.sensor.set_pixformat(self.sensor.RGB565)
-        self.sensor.set_windowing((240,240))
+        # self.sensor.set_windowing((240,240))
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)
@@ -68,7 +63,7 @@ class Track(object):
         #     self.sensor.set_saturation(0)
         #     self.sensor.set_auto_gain(0)
         self.sensor.run(1)
-        self.sensor.skip_frames(20)
+        self.sensor.skip_frames(30)
 
     def recognize(self):
         self.img = self.sensor.snapshot()

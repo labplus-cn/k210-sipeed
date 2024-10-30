@@ -141,7 +141,7 @@ class Apriltag(object):
         #不可修改
         self.sensor.set_auto_gain(False)
         self.sensor.set_auto_whitebal(False)
-        self.sensor.set_windowing((240,240))
+        # self.sensor.set_windowing((240,240))
         # if(self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)
