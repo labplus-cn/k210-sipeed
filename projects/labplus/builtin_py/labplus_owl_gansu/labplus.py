@@ -109,7 +109,7 @@ class AICamera(object):
         self.lcd.init(freq=15000000, invert=1)
         self.lcd.rotation(2)
         try:
-            background = image.Image('/flash/logo.jpg', copy_to_fb=True)
+            background = image.Image('/flash/gansu.jpg', copy_to_fb=True)
             self.lcd.display(background)
             del background
         except Exception as e:
@@ -309,8 +309,8 @@ class AICamera(object):
                     self.k210.lcd_test = True
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x03):
                     self.k210.sensor_test = True
-                elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x04):
-                    self.rgb_test()
+                # elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x04):
+                #     self.rgb_test()
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x05):
                     self.led_test()
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
@@ -927,11 +927,11 @@ class AICamera(object):
     def sensor_test(self):
         self.lcd.display(self.sensor.snapshot())
 
-    def rgb_test(self):
-        for i in range(2):
-            self.rgb.set_led(0,128,0) 
-            time.sleep(1)
-            self.rgb.off()
+    # def rgb_test(self):
+    #     for i in range(2):
+    #         self.rgb.set_led(0,128,0) 
+    #         time.sleep(1)
+    #         self.rgb.off()
     
     def led_test(self):
         for i in range(2):

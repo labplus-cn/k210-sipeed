@@ -299,6 +299,13 @@ class AICamera(object):
                     self.init_canvas()
                 elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x02):
                     self.clear_canvas()
+                elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x03):
+                    self.rgb.set_led(CMD[6],CMD[7],CMD[8])
+                elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x04):
+                    if(CMD[6]==1):
+                        self.led.on()
+                    elif(CMD[6]==0):
+                        self.led.off()                    
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x01):
                     self.k210.mode = FACTORY_MODE
                     if self.sd_test():
@@ -310,7 +317,7 @@ class AICamera(object):
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x03):
                     self.k210.sensor_test = True
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x04):
-                    self.rgb_test()
+                    self.rgb_test(CMD[6],CMD[7],CMD[8])
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x05):
                     self.led_test()
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
@@ -927,11 +934,13 @@ class AICamera(object):
     def sensor_test(self):
         self.lcd.display(self.sensor.snapshot())
 
-    def rgb_test(self):
-        for i in range(2):
-            self.rgb.set_led(0,128,0) 
-            time.sleep(1)
-            self.rgb.off()
+    def rgb_test(self,r,g,b):
+        self.rgb.set_led(r,g,b) 
+        time.sleep(0.1)
+        # for i in range(2):
+            # self.rgb.set_led(r,g,b) 
+            # time.sleep(1)
+            # self.rgb.off()
     
     def led_test(self):
         for i in range(2):
@@ -942,6 +951,7 @@ class AICamera(object):
     def button_update_status(self):
         self.btn_A_status = self.btn_A.is_pressed()
         self.btn_B_status = self.btn_B.is_pressed() 
+        time.sleep_ms(20)
     
 try:
     aiCamera=AICamera()

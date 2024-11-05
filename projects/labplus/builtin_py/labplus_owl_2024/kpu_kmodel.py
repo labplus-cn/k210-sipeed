@@ -23,10 +23,10 @@ class KPU_KMODEL(object):
         max_index=plist.index(pmax)
         a = self.lcd.display(img, oft=(30,0))
         if(pmax>=0.7):
-            self.lcd.draw_string(5, 0, "id:%s"%(max_index), self.lcd.GREEN)
+            self.lcd.draw_string(45, 0, "id:%s"%(max_index), self.lcd.GREEN)
             return max_index,int(round(pmax,2)*100)
         else:
-            self.lcd.draw_string(5, 0, "id:       ",  self.lcd.GREEN)
+            self.lcd.draw_string(45, 0, "id:       ",  self.lcd.GREEN)
             return None,None
 
     def __del__(self):

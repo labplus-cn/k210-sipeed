@@ -68,7 +68,7 @@ class Color(object):
         rgb=image.lab_to_rgb(mylist)
         #设置识别颜色的区域
         img = img.draw_rectangle(self.roi,image.lab_to_rgb(mylist),2,0)
-        img.draw_string(5, 215, 'R:{0},G:{1},B:{2}'.format(rgb[0],rgb[1],rgb[2]), scale=2, color=rgb)
+        img.draw_string(50, 210, 'R:{0},G:{1},B:{2}'.format(rgb[0],rgb[1],rgb[2]), scale=2, color=rgb)
 
         #统计数据对象
         statistics = color.get_statistics()
