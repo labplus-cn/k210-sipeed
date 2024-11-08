@@ -8,6 +8,7 @@ from display import Draw_CJK_String
 class Color(object):
     def __init__(self, lcd=None, sensor=None, choice=1):
         self.lcd = lcd
+        self.lcd.init(freq=15000000, invert=1)
         self.sensor = sensor
         self.roi = [135,95,60,60]
         self.mylist = [0,0,0]

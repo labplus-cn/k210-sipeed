@@ -23,7 +23,8 @@ from track import *
 
 from display import Draw_CJK_String
 import video
-utils.gc_heap_size(0x96000) 
+# utils.gc_heap_size(0x96000) 
+utils.gc_heap_size(0x60000) 
 """ 
 -------------------------------------------------------------------------------------------------------
 盛思OWL初始化
@@ -838,7 +839,7 @@ class AICamera(object):
         self.sensor.run(1)
         self.sensor.skip_frames(30) 
 
-        v = video.open(path, audio=False, record=True, interval=interval, quality=quality)
+        v = video.open(path, audio=False, record=True, interval=interval, quality=quality, width=width, height=height)
 
         # fm.register(13, fm.fpioa.GPIOHS0)
         fm.register(13, fm.fpioa.GPIOHS0, force=True)

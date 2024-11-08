@@ -23,7 +23,7 @@ from track import *
 
 from display import Draw_CJK_String
 import video
-utils.gc_heap_size(0x90000) 
+utils.gc_heap_size(0x60000) 
 """ 
 -------------------------------------------------------------------------------------------------------
 盛思OWL初始化
@@ -511,7 +511,7 @@ class AICamera(object):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
                     data = _str.split("|")
-                    # print(data)
+                    print(data)
                     choice=CMD[5]
                     quality=CMD[6]
                     self.record(path=data[0], interval=int(data[1]), quality=quality, width=int(data[2]), height=int(data[3]), duration=int(data[4]))
@@ -520,6 +520,7 @@ class AICamera(object):
                     _str = str(str_temp.decode('UTF-8','ignore'))
                     data = _str.split("|")
                     print(data)
+                    print('KPU_YOLO_KMODEL')
                     self.k210.mode = KPU_YOLO_MODEL_MODE
                     self.kpu_yolo_model = KPU_YOLO_KMODEL(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]),anchors=eval(data[3]))
                 elif(CMD[3]==DEFAULT_MODE and CMD[4]==0xFA):
@@ -831,7 +832,7 @@ class AICamera(object):
 
     def record(self, path="/sd/capture.avi", interval=100000, quality=50, width=240, height=240, duration=10):
         # self.lcd.init(freq=15000000, invert=1)
-        # self.sensor.reset()
+        self.sensor.reset()
         self.sensor.set_pixformat(sensor.RGB565)
         self.sensor.set_framesize(sensor.QVGA)
         self.sensor.set_windowing((width, height))
@@ -839,7 +840,7 @@ class AICamera(object):
         self.sensor.run(1)
         self.sensor.skip_frames(30) 
 
-        v = video.open(path, audio=False, record=True, interval=interval, quality=quality)
+        v = video.open(path, audio=False, record=True, interval=interval, quality=quality, width=width, height=height)
 
         fm.register(12, fm.fpioa.GPIOHS0, force=True)
         key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)

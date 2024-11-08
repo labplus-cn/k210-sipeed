@@ -23,7 +23,8 @@ from track import *
 
 from display import Draw_CJK_String
 import video
-# utils.gc_heap_size(0x96000) 
+
+utils.gc_heap_size(0x60000) 
 """ 
 -------------------------------------------------------------------------------------------------------
 盛思OWL初始化
@@ -100,13 +101,13 @@ class AICamera(object):
           
         self.lcd.init(freq=15000000, invert=1)
         try:
-            background = image.Image('/flash/startup.jpg', copy_to_fb=True)
+            background = image.Image('/flash/gansu.jpg', copy_to_fb=True)
             self.lcd.display(background)
             del background
         except Exception as e:
             self.lcd.clear(lcd.BLUE)
-            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera", lcd.WHITE, lcd.BLUE) 
-            time.sleep(3)
+            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera 2.0", lcd.WHITE, lcd.BLUE) 
+            time.sleep(1)
 
         self.change_camera(_choice=1)
 
@@ -790,7 +791,7 @@ class AICamera(object):
         self.sensor.run(1)
         self.sensor.skip_frames(30) 
 
-        v = video.open(path, audio=False, record=True, interval=interval, quality=quality)
+        v = video.open(path, audio=False, record=True, interval=interval, quality=quality, width=width, height=height)
 
         fm.register(16, fm.fpioa.GPIOHS0+16)
         key = GPIO(GPIO.GPIOHS0+16, GPIO.PULL_UP)

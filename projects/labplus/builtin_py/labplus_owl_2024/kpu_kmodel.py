@@ -3,10 +3,21 @@ import time
 
 class KPU_KMODEL(object):
     def __init__(self,sensor=None,kpu=None,lcd=None,model=0xc50000,width=128,height=128):
+        from Maix import utils
+        utils.gc_heap_size(0x55000)
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
-        self.task = self.kpu.load(model)
+        self.kpu.memtest()
+        try:
+            self.task = self.kpu.load(model)
+        except Exception as e:
+            print(e)
+            e=str(e)
+            self.lcd.draw_string(0,200, e, lcd.WHITE, lcd.BLUE)
+            if(len(e)>22):
+                self.lcd.draw_string(0,220, e[23:-1], lcd.WHITE, lcd.BLUE)
+            time.sleep(8)
         self.lcd.clear()
         # self.labels = ["stop","none","left","right"]
         self.width = width
@@ -15,18 +26,19 @@ class KPU_KMODEL(object):
         self.change_camera()
     
     def recognize(self):
+        # self.kpu.memtest()
         img = self.sensor.snapshot()
-        # img=img.resize(128,128)         #resize to mnist input 128x128
+        # img=img.resize(128,128) 
         fmap = self.kpu.forward(self.task, img)
         plist=fmap[:]
         pmax=max(plist)
         max_index=plist.index(pmax)
-        a = self.lcd.display(img, oft=(30,0))
+        a = self.lcd.display(img, oft=(30,20))
         if(pmax>=0.7):
-            self.lcd.draw_string(45, 0, "id:%s"%(max_index), self.lcd.GREEN)
+            self.lcd.draw_string(5, 5, "id:%s"%(max_index), self.lcd.GREEN)
             return max_index,int(round(pmax,2)*100)
         else:
-            self.lcd.draw_string(45, 0, "id:       ",  self.lcd.GREEN)
+            self.lcd.draw_string(5, 5, "id:       ",  self.lcd.GREEN)
             return None,None
 
     def __del__(self):
@@ -43,16 +55,6 @@ class KPU_KMODEL(object):
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         
-        # if(choice==1 and self.sensor.get_id()==0x2642):
-        #     self.sensor.set_vflip(1)
-        #     self.sensor.set_hmirror(1)
-        # elif(choice==1 and self.sensor.get_id()==0x5640):
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        # else:
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        
         self.sensor.skip_frames(30)
         self.sensor.run(1)
         time.sleep(1)
@@ -61,6 +63,8 @@ class KPU_KMODEL(object):
 
 class KPU_YOLO_KMODEL(object):
     def __init__(self,  sensor=None,kpu=None,lcd=None, model="/sd/m.kmodel", width=128, height=128, anchors=[]):
+        from Maix import utils
+        utils.gc_heap_size(0x60000)
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
