@@ -250,7 +250,7 @@ class Face_recognization(object):
             self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_hmirror(0)
+            self.sensor.set_hmirror(1)
             # self.sensor.set_vflip(1)
             # self.sensor.set_windowing((240,240))
             # self.sensor.set_brightness(-1) #亮度
@@ -258,9 +258,6 @@ class Face_recognization(object):
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         
-        # if(choice==1 and self.sensor.get_id()==0x2642):
-        #     self.sensor.set_vflip(1)
-        #     self.sensor.set_hmirror(1)
         self.sensor.skip_frames(30)
         self.sensor.run(1)
 

@@ -40,14 +40,7 @@ class Track(object):
         self.area_threshold = area_threshold
         self.img = None
 
-        self.change_camera()
-        # if(choice==1 and self.sensor.get_id()==0x2642):
-        #     self.sensor.set_vflip(1)
-        #     self.sensor.set_hmirror(1)
-        # elif(choice==1 and self.sensor.get_id()==0x5640):
-        #     self.sensor.set_vflip(0)
-        #     self.sensor.set_hmirror(0)
-        
+        self.change_camera()        
         # self.init_data()
         # self.load_data()
         time.sleep(0.5)
@@ -61,7 +54,7 @@ class Track(object):
             self.sensor.set_framesize(self.sensor.QVGA)
             self.sensor.set_pixformat(self.sensor.RGB565)
             # self.sensor.set_vflip(1)
-            self.sensor.set_hmirror(0)
+            self.sensor.set_hmirror(1)
             self.sensor.set_windowing((240,240))
             # self.sensor.set_brightness(-1) #亮度
         except Exception as e:

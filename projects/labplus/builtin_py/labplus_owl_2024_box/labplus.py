@@ -799,7 +799,7 @@ class AICamera(object):
         self.kpu.memtest()
   
 
-    def change_camera(self,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=0,_hmirror=0,_brightness=0,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
+    def change_camera(self,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=0,_hmirror=1,_brightness=0,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
         try:
             # self.sensor.reset()
             self.sensor.reset(freq=_freq,dual_buff=_dual_buff)
@@ -957,7 +957,7 @@ try:
     aiCamera=AICamera()
 except Exception as e:
     lcd.clear((0, 0, 255))
-    # s=str(e)
-    # lcd.draw_string(0,200, s, lcd.WHITE, lcd.BLUE)
-    # if(len(s)>20):
-    #     lcd.draw_string(0,220, s[21:-1], lcd.WHITE, lcd.BLUE)
+    s=str(e)
+    lcd.draw_string(0,200, s, lcd.WHITE, lcd.BLUE)
+    if(len(s)>20):
+        lcd.draw_string(0,220, s[21:-1], lcd.WHITE, lcd.BLUE)
