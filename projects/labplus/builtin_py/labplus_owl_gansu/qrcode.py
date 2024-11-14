@@ -89,7 +89,7 @@ class QRCode(object):
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
         self.sensor.set_framesize(self.sensor.QVGA)
         self.sensor.set_pixformat(self.sensor.RGB565)
-        self.sensor.set_windowing((240,240))
+        # self.sensor.set_windowing((240,240))
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
         #     self.sensor.set_hmirror(1)

@@ -104,7 +104,6 @@ class AICamera(object):
         self.kpu = kpu
         self.sensor = sensor
         self.led = LED(25,False)
-        # self.rgb = RGB(35,1)
           
         self.lcd.init(freq=15000000, invert=1)
         self.lcd.rotation(2)
@@ -151,7 +150,7 @@ class AICamera(object):
         self._choice=1
         self._framesize=sensor.QVGA
         self._pixformat=sensor.RGB565
-        self._w=240
+        self._w=320
         self._h=240
         self._vflip=1
         self._hmirror=1
@@ -293,7 +292,10 @@ class AICamera(object):
         CMD = cmd
         if(len(CMD)>0):
             if(CMD[2]==0x01):
-                if(CMD[3]==0x01 and CMD[4]==0xFF):
+                if(CMD[3]==0x01 and CMD[4]==0x01):
+                    self.AI_Uart_CMD(0x01,0x01,0x01)
+                    time.sleep_ms(100)
+                elif(CMD[3]==0x01 and CMD[4]==0xFF):
                     self.reset()
                 elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x01):
                     self.init_canvas()
@@ -799,7 +801,7 @@ class AICamera(object):
         self.kpu.memtest()
   
 
-    def change_camera(self,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=0,_hmirror=0,_brightness=-1,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
+    def change_camera(self,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=320,_h=240,_vflip=0,_hmirror=0,_brightness=0,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
         try:
             # self.sensor.reset(choice=_choice,freq=_freq,dual_buff=_dual_buff)
             self.sensor.reset(freq=_freq,dual_buff=_dual_buff)
@@ -822,7 +824,7 @@ class AICamera(object):
         self.sensor.run(1)
         time.sleep(0.1)
 
-    def record(self, path="/sd/capture.avi", interval=100000, quality=50, width=240, height=240, duration=10):
+    def record(self, path="/sd/capture.avi", interval=100000, quality=50, width=320, height=240, duration=10):
         # self.lcd.init(freq=15000000, invert=1)
         # self.sensor.reset()
         self.sensor.set_pixformat(sensor.RGB565)

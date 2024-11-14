@@ -17,10 +17,10 @@ class Self_learning_classifier(object):
     self.img = None
     gc.collect()
 
-    #A键
+    # A键
     fm.register(12, fm.fpioa.GPIOHS0, force=True)
     self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
-    #B键
+    # B键
     fm.register(13, fm.fpioa.GPIOHS1, force=True)
     self.key_b = GPIO(GPIO.GPIOHS1, GPIO.PULL_UP)
 

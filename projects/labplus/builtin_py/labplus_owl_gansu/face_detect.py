@@ -5,8 +5,7 @@ class FACE_DETECT(object):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
-        # self.lcd.init(invert=1)
-        self.lcd.rotation(1)
+        # self.lcd.rotation(1)
         self.clock = time.clock()
         self.task = self.kpu.load(0x300000)
         self.anchor = (1.889, 2.5245, 2.9465, 3.94056, 3.99987, 5.3658, 5.155437, 6.92275, 6.718375, 9.01025) 
@@ -37,7 +36,7 @@ class FACE_DETECT(object):
             self.sensor.reset(freq=24000000)
             self.sensor.set_pixformat(self.sensor.RGB565)
             self.sensor.set_framesize(self.sensor.QVGA)
-            self.sensor.set_brightness(-1) #亮度
+            # self.sensor.set_brightness(-1) #亮度
         except Exception as e:
             self.lcd.clear((0, 0, 255))
             self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 

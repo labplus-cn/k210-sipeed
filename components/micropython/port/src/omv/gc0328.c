@@ -96,6 +96,7 @@ uint8_t sensor_default_regs[][2] = {
 	{0x4f , 0x00},  
 	{0x4c , 0x01},  
 	{0xfe , 0x00},  
+	// {0xfa , 0x11},   //降频
 	//////////////////////////////
 	///////////AWB///////////
 	////////////////////////////////
@@ -184,7 +185,7 @@ uint8_t sensor_default_regs[][2] = {
 	{0x21 , 0x78},  
 	{0x22 , 0xb0},  
 	{0x23 , 0x04}, 
-	{0x24 , 0x11},  //output pin abilityof driver config
+	{0x24 , 0x2A},  //output pin abilityof driver config //0x11
 	{0x26 , 0x00},  
 
 

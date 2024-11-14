@@ -26,7 +26,7 @@ print("-- SDK_PATH:{}".format(sdk_path))
 
 def main():
     parser = argparse.ArgumentParser("make labplus K210 projects")
-    parser.add_argument('--board','-b', choices=['owl_box','owl_2024', 'owl', 'classroom_kit', 'owl_dog'], help='选择合适的板子, python3 make.py -b owl build', required=True)
+    parser.add_argument('--board','-b', choices=['owl_gansu','owl_box','owl_2024', 'owl', 'classroom_kit', 'owl_dog'], help='选择合适的板子, python3 make.py -b owl build', required=True)
 
     subparsers = parser.add_subparsers(dest='subcommand',help='select the task')
 
@@ -62,6 +62,8 @@ def build(args):
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_2024.mk']
     if args.board == 'owl_box':
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_2024_box.mk']
+    if args.board == 'owl_gansu':
+        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_gansu.mk']
     if args.board == 'owl':
         sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl.mk']
     if args.board == 'owl_dog':
@@ -125,8 +127,8 @@ def flash(args):
     # dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0004)   # set CP2104.GPIO2 = 0
 
     cmd = 'kflash' + '  -B kd233 -p /dev/ttyUSB0 -b 1500000' + ' build/labplus.bin'
-    cmd = 'kflash' + '  -p /dev/ttyCH343USB0 -b 1500000' + ' build/labplus.bin'
-    # cmd = 'kflash' + '  -p /dev/ttyUSB0 -b 1500000' + ' build/labplus.bin'
+    cmd = 'kflash' + '  -p /dev/ttyCH343USB0 -b 2000000' + ' build/labplus.bin'
+    # cmd = 'kflash' + '  -p /dev/ttyUSB0 -b 2000000' + ' build/labplus.bin'
     os.system(cmd)
     
     # dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0404)   # set CP2104.GPIO2 = 1
