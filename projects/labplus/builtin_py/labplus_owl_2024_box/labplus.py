@@ -297,7 +297,10 @@ class AICamera(object):
         CMD = cmd
         if(len(CMD)>0):
             if(CMD[2]==0x01):
-                if(CMD[3]==0x01 and CMD[4]==0xFF):
+                if(CMD[3]==0x01 and CMD[4]==0x01):
+                    self.AI_Uart_CMD(0x01,0x01,0x01)
+                    time.sleep_ms(200)
+                elif(CMD[3]==0x01 and CMD[4]==0xFF):
                     self.reset()
                 elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x01):
                     self.init_canvas()

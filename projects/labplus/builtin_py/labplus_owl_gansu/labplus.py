@@ -23,7 +23,7 @@ from track import *
 
 from display import Draw_CJK_String
 import video
-utils.gc_heap_size(0x90000) 
+utils.gc_heap_size(0x60000) 
 """ 
 -------------------------------------------------------------------------------------------------------
 盛思OWL初始化
@@ -294,7 +294,7 @@ class AICamera(object):
             if(CMD[2]==0x01):
                 if(CMD[3]==0x01 and CMD[4]==0x01):
                     self.AI_Uart_CMD(0x01,0x01,0x01)
-                    time.sleep_ms(100)
+                    time.sleep_ms(200)
                 elif(CMD[3]==0x01 and CMD[4]==0xFF):
                     self.reset()
                 elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x01):
@@ -552,12 +552,10 @@ class AICamera(object):
                     pass
                 elif(self.k210.mode==COLOR_STATISTICS_MODE and self.color_statistics!=None):
                     if(self.k210.flag_color_statistics_recognize):
-                        time.sleep_ms(10)
+                        time.sleep_ms(5)
                         tmp =  self.color_statistics.recognize()
                         if(tmp==None or tmp[-1]==None):
-                            # self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
-                            print('^'*3)
-                            pass
+                            self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
                         else:
                             data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line=tmp
                             _cmd_data = [data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15]
