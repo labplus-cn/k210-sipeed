@@ -244,6 +244,7 @@ class RGB():
     def __init__(self, pin,  num):
         self.rgb = ws2812(pin,num)
         self.num = num
+        self.off()
 
     def set_led(self,r,g,b):
         for i in range(self.num):

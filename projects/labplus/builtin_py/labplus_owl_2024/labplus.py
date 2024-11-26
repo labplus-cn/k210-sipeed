@@ -114,7 +114,7 @@ class AICamera(object):
             del background
         except Exception as e:
             self.lcd.clear(lcd.BLUE)
-            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera", lcd.WHITE, lcd.BLUE) 
+            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera 4.0", lcd.WHITE, lcd.BLUE) 
             time.sleep(1)
 
         self.change_camera()
@@ -128,6 +128,7 @@ class AICamera(object):
 
         # TF卡状态
         self.tf_status = 0
+        self.tf_sn =  ''
 
         # k210 flag
         self.k210 = self.K210()
@@ -537,8 +538,12 @@ class AICamera(object):
                     y = data[1]
                     # txt = data[2]
                     txt = bytes(str(data[2]),'utf-8')
-
                     self.canvas_txt(txt,scale,x,y)
+                elif(CMD[3]==FACTORY_MODE and CMD[4]==0x01):
+                    str_temp = bytes(CMD[9:-1])
+                    _str = str(str_temp.decode('UTF-8','ignore'))
+                    sn = eval(_str)[0]
+                    self.sn_write(sn)
                     
                 
 
@@ -747,12 +752,15 @@ class AICamera(object):
                         else:
                             self.AI_Uart_CMD(0x01,0x10,0x03,cmd_data=[id,value])
                 elif(self.k210.mode==FACTORY_MODE):
+                    time.sleep_ms(15)
                     self.button_update_status()
+                    self.tf_sn = self.sn_read()
                     if(self.k210.lcd_test):
                         self.lcd_test()
                     elif(self.k210.sensor_test):
                         self.sensor_test()
-                    self.AI_Uart_CMD(0x01,FACTORY_MODE,0x01,cmd_data=[self.btn_A_status,self.btn_B_status,self.tf_status])
+                    # self.AI_Uart_CMD(0x01,FACTORY_MODE,0x01,cmd_data=[self.btn_A_status,self.btn_B_status,self.tf_status])
+                    self.AI_Uart_CMD_String(cmd=FACTORY_MODE,cmd_type=0x01,cmd_data=[self.btn_A_status,self.btn_B_status,self.tf_status],str_buf=str([self.tf_sn]))
             except Exception as e:
                 s=str(e)
                 print(s)
@@ -934,6 +942,14 @@ class AICamera(object):
             self.lcd.clear(COLOR[i])
             time.sleep(1)
         self.k210.lcd_test = False
+        time.sleep(1)
+        try:
+            background = image.Image('/flash/logo.jpg', copy_to_fb=True)
+            self.lcd.display(background)
+            del background
+        except Exception as e:
+            self.lcd.clear(lcd.BLUE)
+            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera 4.0", lcd.WHITE, lcd.BLUE) 
 
     def sensor_test(self):
         self.lcd.display(self.sensor.snapshot())
@@ -941,21 +957,48 @@ class AICamera(object):
     def rgb_test(self,r,g,b):
         self.rgb.set_led(r,g,b) 
         time.sleep(0.1)
-        # for i in range(2):
-            # self.rgb.set_led(r,g,b) 
-            # time.sleep(1)
-            # self.rgb.off()
     
     def led_test(self):
         for i in range(2):
             self.led.on()
-            time.sleep(1)
+            time.sleep(1.5)
             self.led.off()
 
     def button_update_status(self):
         self.btn_A_status = self.btn_A.is_pressed()
         self.btn_B_status = self.btn_B.is_pressed() 
-        time.sleep_ms(20)
+    
+    def sn_write(self,sn):
+        for v in os.listdir('/'):
+            if v == 'flash':
+                with open("/flash/_sn.txt", "w") as f:
+                    f.close()
+            
+                with open("/flash/_sn.txt", "a") as f:
+                    f.write(str(sn))
+                    f.write("\n")
+                    f.close()
+        
+    def sn_read(self):
+        flag = False
+        sn =  ''
+        for v in os.listdir('/'):
+            if v == 'flash': 
+                for v in os.listdir('/flash'):
+                    if v == '_sn.txt':
+                        flag = True
+                        break
+            
+            if(flag):
+                with open("/flash/_sn.txt", "r") as f:
+                    sn = f.readline().rstrip()
+                    f.close()
+                
+                return sn
+            else:
+                return ''
+    
+       
     
 try:
     aiCamera=AICamera()

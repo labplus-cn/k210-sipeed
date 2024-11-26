@@ -531,6 +531,8 @@ class AICamera(object):
                     print(txt)
 
                     self.canvas_txt(txt,scale,x,y)
+
+
                     
                 
 
