@@ -24,6 +24,7 @@ class Self_learning_classifier(object):
     fm.register(13, fm.fpioa.GPIOHS1, force=True)
     self.key_b = GPIO(GPIO.GPIOHS1, GPIO.PULL_UP)
 
+    self.kpu.memtest()
     gc.collect()
     self.model = self.kpu.load(self.model_addr)
     self.classifier = self.kpu.classifier(self.model, self.class_num, self.sample_num)

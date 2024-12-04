@@ -1,11 +1,12 @@
 import time
+import gc
 
 class FACE_DETECT(object):
     def __init__(self,sensor,kpu,lcd):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
-        # self.lcd.init(invert=1)
+        self.kpu.memtest()
         self.lcd.rotation(1)
         self.clock = time.clock()
         self.task = self.kpu.load(0x300000)
@@ -15,11 +16,10 @@ class FACE_DETECT(object):
         time.sleep(1)
     
     def recognize(self):
-        self.kpu.memtest()
+        # self.kpu.memtest()
         self.clock.tick()
         img = self.sensor.snapshot()
         code = self.kpu.run_yolo2(self.task, img)
-        # print(self.clock.fps())
         if code:
             for i in code:
                 a=img.draw_rectangle(i.rect(), color=(0,255,0), thickness=2)
@@ -31,6 +31,10 @@ class FACE_DETECT(object):
 
     def __del__(self):
         a = self.kpu.deinit(self.task)
+        print('kpu.deinit:{}'.format(a))
+        del self.task
+        gc.collect()
+
 
     def change_camera(self):
         try:

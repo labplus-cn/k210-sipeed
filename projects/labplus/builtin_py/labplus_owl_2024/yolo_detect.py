@@ -6,7 +6,7 @@ class YOLO_DETECT(object):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
-
+        self.kpu.memtest()
         self.clock = time.clock()
         self.classes = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
         self.task = self.kpu.load(0x450000)
@@ -18,6 +18,7 @@ class YOLO_DETECT(object):
     
     def recognize(self):
         self.clock.tick()
+        # self.kpu.memtest()
         img = self.sensor.snapshot()
         code = self.kpu.run_yolo2(self.task, img)
         if code:
@@ -34,6 +35,7 @@ class YOLO_DETECT(object):
 
     def __del__(self):
         a = self.kpu.deinit(self.task)
+        print('kpu.deinit:{}'.format(a))
         del self.task
         gc.collect()
 

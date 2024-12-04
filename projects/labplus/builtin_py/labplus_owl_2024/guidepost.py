@@ -8,6 +8,7 @@ class Guidepost(object):
         self.lcd =lcd
         self.sensor = sensor
         self.kpu = kpu
+        self.kpu.memtest()
         self.task = self.kpu.load(0xc50000)
         # self.task = self.kpu.load('/sd/qingjiao3.kmodel')
         self.img = None
@@ -17,10 +18,9 @@ class Guidepost(object):
         self.change_camera()
     
     def recognize(self):
-        self.kpu.memtest()
+        # self.kpu.memtest()
         # print('==Guidepost==')
         self.img = self.sensor.snapshot()
-        print(self.img.width())
         try:
             fmap = self.kpu.forward(self.task, self.img)
         except Exception as e:
@@ -43,8 +43,6 @@ class Guidepost(object):
         a = self.kpu.deinit(self.task)
         print('kpu.deinit:{}'.format(a))
         del self.task
-        # del self.fmap
-   
         gc.collect()
 
     def change_camera(self):
