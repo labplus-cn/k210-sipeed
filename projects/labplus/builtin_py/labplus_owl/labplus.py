@@ -610,7 +610,7 @@ class AICamera(object):
                         tmp = self.qrcode.recognize()
                         if(tmp==None):
                             self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[0xff])
-                        elif(tmp[0]==None):
+                        elif(tmp[1]==None):
                             self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[0xff])
                         else:
                             id,info = tmp
