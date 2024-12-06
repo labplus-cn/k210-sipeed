@@ -93,12 +93,16 @@ class AICamera(object):
             self.button_test = False
             self.light_test = False
             # self.sd_test = False
+
+            #切换模式
+            self.sw_lock = False
             
     def __init__(self):
         fm.register(11, fm.fpioa.UART2_TX, force=True)
         fm.register(10, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
-        self.uart.init(1152000, 8, None, 1, read_buf_len=128)
+        # self.uart.init(1152000, 8, None, 1, read_buf_len=128)
+        self.uart.init(1152000, 8, None, read_buf_len=4096)
         time.sleep(0.1)
         self.lcd = lcd
         self.kpu = kpu
@@ -217,7 +221,6 @@ class AICamera(object):
             time.sleep_ms(10)
             if(self.uart.any()):
                 head=self.uart.read(2)
-                print(head)
                 if(head and head[0]==0xAA and head[1]==0xBB):
                     cmd_type = self.uart.read(1)
                     if(cmd_type[0]==0x01):
@@ -231,6 +234,9 @@ class AICamera(object):
                         elif(res and res[0]==0x01 and res[1]==0xFF):
                             self.reset()
                 else:
+                    print(head)
+                    print('==head==')
+                    print('**^**')
                     _cmd = self.uart.read()
                     del _cmd
                     gc.collect()
@@ -240,7 +246,7 @@ class AICamera(object):
         checksum = 0
         if(self.uart.any()):
             head = self.uart.read(2)
-            if(head!=None and head[0] == 0xAA and head[1]==0xBB):
+            if(head and head[0] == 0xAA and head[1]==0xBB):
                 CMD_TEMP.extend([0xAA,0xBB])
                 time.sleep_ms(1)
                 cmd_type = self.uart.read(1)
@@ -249,7 +255,7 @@ class AICamera(object):
                     return
                 CMD_TEMP.append(cmd_type[0])
                 if(CMD_TEMP[2]==0x01):
-                    time.sleep_ms(5)
+                    time.sleep_ms(2)
                     res = self.uart.read(11)
                     if(res==None or len(res)!=11):
                         print(res)
@@ -260,6 +266,9 @@ class AICamera(object):
                     checksum = self.CheckCode(CMD_TEMP[:13])
                     if(res and checksum == CMD_TEMP[13]):
                         self.process_cmd(CMD_TEMP)
+                    else:
+                        print(CMD_TEMP)
+                        print('===CMD_TEMP====')
                 elif(CMD_TEMP[2]==0x02):
                     time.sleep_ms(5)
                     res = self.uart.read(6)
@@ -285,8 +294,9 @@ class AICamera(object):
                     self.process_cmd(CMD_TEMP)  
                     # print(str(str_temp.decode('UTF-8','ignore')))
             else:
-                # print(head)
-                # print('**^**')
+                print(head)
+                print('==head==')
+                print('**^**')
                 # del _cmd
                 gc.collect()
 
@@ -299,6 +309,9 @@ class AICamera(object):
                     time.sleep_ms(200)
                 elif(CMD[3]==0x01 and CMD[4]==0xFF):
                     self.reset()
+                elif(CMD[3]==0x01 and CMD[4]==0xFE):
+                    print("$$$")
+                    self.switcherMode(CMD[5])
                 elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x01):
                     self.init_canvas()
                 elif(CMD[3]==0x01 and CMD[4]==0xFA and CMD[5]==0x02):
@@ -324,8 +337,6 @@ class AICamera(object):
                     self.rgb_test(CMD[6],CMD[7],CMD[8])
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x05):
                     self.led_test()
-                elif(CMD[3]==0x01 and CMD[4]==0xFE):
-                    self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
                     self.k210.mode = MNIST_MODE
                     self.mnist = MNIST(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd)
@@ -545,11 +556,6 @@ class AICamera(object):
                     sn = eval(_str)[0]
                     self.sn_write(sn)
                     
-                
-
-
-                                    
-
     def uart_listen(self):
         num = 0
         while True:
@@ -561,6 +567,7 @@ class AICamera(object):
             except Exception as e:
                 print(str(e))
                 print("==uart_handle==")
+
             try:
                 if(self.k210.mode==DEFAULT_MODE):
                     pass
@@ -670,7 +677,7 @@ class AICamera(object):
                         tmp = self.qrcode.recognize()
                         if(tmp==None):
                             self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[0xff])
-                        elif(tmp[0]==None):
+                        elif(tmp[1]==None):
                             self.AI_Uart_CMD(0x01,0x08,0x03,cmd_data=[0xff])
                         else:
                             id,info = tmp
@@ -775,6 +782,11 @@ class AICamera(object):
         machine.reset()
     
     def switcherMode(self, mode):
+        if(mode==self.k210.mode or self.k210.sw_lock):
+            print('switcherMode return')
+            return
+        
+        self.k210.sw_lock = True
         if(self.k210.mode==GUIDEPOST_MODE):
             self.guidepost.__del__()
             del self.guidepost
@@ -799,23 +811,24 @@ class AICamera(object):
             self.yolo_detect.__del__()
             del self.yolo_detect
             self.yolo_detect=None
+        elif(self.k210.mode==FACE_DETECTION_MODE):
+            self.face_detect.__del__()
+            del self.face_detect
+            self.face_detect=None
         
+        time.sleep(0.1)
+        _cmd = self.uart.read()        
+        del _cmd
         gc.collect()
-        
         self.k210 = self.K210()
         
-
-        time.sleep(0.1)
-        _cmd = self.uart.read()
-        del _cmd
-        time.sleep(0.2)
-        self.AI_Uart_CMD(0x01,0x01,0xFE)
-        time.sleep(0.1)
-        
-        # gc.collect()
-        print(self.k210.mode)
-        self.lcd.draw_string(0,230, 'switcher mode', lcd.WHITE, lcd.BLUE)
-        self.kpu.memtest()
+        for i in range(3):
+            self.AI_Uart_CMD(0x01,0x01,0xFE)
+            time.sleep(0.1)
+    
+        self.lcd.draw_string(0,225, 'switcher mode', lcd.WHITE, lcd.BLUE)
+        self.k210.sw_lock = False
+        print('===switcher mode===')
   
 
     def change_camera(self,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=240,_h=240,_vflip=0,_hmirror=0,_brightness=-1,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
