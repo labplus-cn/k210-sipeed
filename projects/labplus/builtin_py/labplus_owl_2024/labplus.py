@@ -234,9 +234,9 @@ class AICamera(object):
                         elif(res and res[0]==0x01 and res[1]==0xFF):
                             self.reset()
                 else:
-                    print(head)
-                    print('==head==')
-                    print('**^**')
+                    # print(head)
+                    # print('==head==')
+                    # print('**^**')
                     _cmd = self.uart.read()
                     del _cmd
                     gc.collect()
@@ -266,9 +266,9 @@ class AICamera(object):
                     checksum = self.CheckCode(CMD_TEMP[:13])
                     if(res and checksum == CMD_TEMP[13]):
                         self.process_cmd(CMD_TEMP)
-                    else:
-                        print(CMD_TEMP)
-                        print('===CMD_TEMP====')
+                    # else:
+                    #     print(CMD_TEMP)
+                    #     print('===CMD_TEMP====')
                 elif(CMD_TEMP[2]==0x02):
                     time.sleep_ms(5)
                     res = self.uart.read(6)
@@ -294,9 +294,9 @@ class AICamera(object):
                     self.process_cmd(CMD_TEMP)  
                     # print(str(str_temp.decode('UTF-8','ignore')))
             else:
-                print(head)
-                print('==head==')
-                print('**^**')
+                # print(head)
+                # print('==head==')
+                # print('**^**')
                 # del _cmd
                 gc.collect()
 
@@ -577,7 +577,7 @@ class AICamera(object):
                         tmp =  self.color_statistics.recognize()
                         if(tmp==None or tmp[-1]==None):
                             # self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
-                            print('^'*3)
+                            # print('^'*3)
                             pass
                         else:
                             data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line=tmp
@@ -821,7 +821,7 @@ class AICamera(object):
         del _cmd
         gc.collect()
         self.k210 = self.K210()
-        
+
         for i in range(3):
             self.AI_Uart_CMD(0x01,0x01,0xFE)
             time.sleep(0.1)

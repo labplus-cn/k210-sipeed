@@ -93,12 +93,16 @@ class AICamera(object):
             self.button_test = False
             self.light_test = False
             # self.sd_test = False
+
+            #切换模式
+            self.sw_lock = False
             
     def __init__(self):
         fm.register(11, fm.fpioa.UART2_TX, force=True)
         fm.register(10, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
-        self.uart.init(1152000, 8, None, 1, read_buf_len=128)
+        # self.uart.init(1152000, 8, None, 1, read_buf_len=128)
+        self.uart.init(1152000, 8, None, read_buf_len=4096)
         time.sleep(0.1)
         self.lcd = lcd
         self.kpu = kpu
@@ -113,7 +117,7 @@ class AICamera(object):
             del background
         except Exception as e:
             self.lcd.clear(lcd.BLUE)
-            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera", lcd.WHITE, lcd.BLUE) 
+            self.lcd.draw_string(lcd.width()//2-100,lcd.height()//2-4, "labplus AI Camera gansu", lcd.WHITE, lcd.BLUE) 
             time.sleep(1)
 
         self.change_camera()
@@ -127,6 +131,7 @@ class AICamera(object):
 
         # TF卡状态
         self.tf_status = 0
+        self.tf_sn =  ''
 
         # k210 flag
         self.k210 = self.K210()
@@ -215,7 +220,6 @@ class AICamera(object):
             time.sleep_ms(10)
             if(self.uart.any()):
                 head=self.uart.read(2)
-                print(head)
                 if(head and head[0]==0xAA and head[1]==0xBB):
                     cmd_type = self.uart.read(1)
                     if(cmd_type[0]==0x01):
@@ -229,6 +233,9 @@ class AICamera(object):
                         elif(res and res[0]==0x01 and res[1]==0xFF):
                             self.reset()
                 else:
+                    # print(head)
+                    # print('==head==')
+                    # print('**^**')
                     _cmd = self.uart.read()
                     del _cmd
                     gc.collect()
@@ -238,7 +245,7 @@ class AICamera(object):
         checksum = 0
         if(self.uart.any()):
             head = self.uart.read(2)
-            if(head!=None and head[0] == 0xAA and head[1]==0xBB):
+            if(head and head[0] == 0xAA and head[1]==0xBB):
                 CMD_TEMP.extend([0xAA,0xBB])
                 time.sleep_ms(1)
                 cmd_type = self.uart.read(1)
@@ -247,7 +254,7 @@ class AICamera(object):
                     return
                 CMD_TEMP.append(cmd_type[0])
                 if(CMD_TEMP[2]==0x01):
-                    time.sleep_ms(5)
+                    time.sleep_ms(2)
                     res = self.uart.read(11)
                     if(res==None or len(res)!=11):
                         print(res)
@@ -258,6 +265,9 @@ class AICamera(object):
                     checksum = self.CheckCode(CMD_TEMP[:13])
                     if(res and checksum == CMD_TEMP[13]):
                         self.process_cmd(CMD_TEMP)
+                    # else:
+                    #     print(CMD_TEMP)
+                    #     print('===CMD_TEMP====')
                 elif(CMD_TEMP[2]==0x02):
                     time.sleep_ms(5)
                     res = self.uart.read(6)
@@ -284,6 +294,7 @@ class AICamera(object):
                     # print(str(str_temp.decode('UTF-8','ignore')))
             else:
                 # print(head)
+                # print('==head==')
                 # print('**^**')
                 # del _cmd
                 gc.collect()
@@ -316,6 +327,7 @@ class AICamera(object):
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x05):
                     self.led_test()
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
+                    print("$$$")
                     self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
                     self.k210.mode = MNIST_MODE
@@ -506,7 +518,7 @@ class AICamera(object):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
                     data = _str.split("|")
-                    # print(data)
+                    print(data)
                     choice=CMD[5]
                     quality=CMD[6]
                     self.record(path=data[0], interval=int(data[1]), quality=quality, width=int(data[2]), height=int(data[3]), duration=int(data[4]))
@@ -528,14 +540,13 @@ class AICamera(object):
                     y = data[1]
                     # txt = data[2]
                     txt = bytes(str(data[2]),'utf-8')
-
                     self.canvas_txt(txt,scale,x,y)
+                elif(CMD[3]==FACTORY_MODE and CMD[4]==0x01):
+                    str_temp = bytes(CMD[9:-1])
+                    _str = str(str_temp.decode('UTF-8','ignore'))
+                    sn = eval(_str)[0]
+                    self.sn_write(sn)
                     
-                
-
-
-                                    
-
     def uart_listen(self):
         num = 0
         while True:
@@ -547,15 +558,18 @@ class AICamera(object):
             except Exception as e:
                 print(str(e))
                 print("==uart_handle==")
+
             try:
                 if(self.k210.mode==DEFAULT_MODE):
                     pass
                 elif(self.k210.mode==COLOR_STATISTICS_MODE and self.color_statistics!=None):
                     if(self.k210.flag_color_statistics_recognize):
-                        time.sleep_ms(5)
+                        time.sleep_ms(10)
                         tmp =  self.color_statistics.recognize()
                         if(tmp==None or tmp[-1]==None):
-                            self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
+                            # self.AI_Uart_CMD(0x01,0x0d,0x02,cmd_data=[0xff])
+                            # print('^'*3)
+                            pass
                         else:
                             data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15,_line=tmp
                             _cmd_data = [data1,data2,data3,data4,data5,data6,data7,data8,data9,data10,data11,data12,data13,data14,data15]
@@ -736,12 +750,15 @@ class AICamera(object):
                         else:
                             self.AI_Uart_CMD(0x01,0x10,0x03,cmd_data=[id,value])
                 elif(self.k210.mode==FACTORY_MODE):
+                    time.sleep_ms(15)
                     self.button_update_status()
+                    self.tf_sn = self.sn_read()
                     if(self.k210.lcd_test):
                         self.lcd_test()
                     elif(self.k210.sensor_test):
                         self.sensor_test()
-                    self.AI_Uart_CMD(0x01,FACTORY_MODE,0x01,cmd_data=[self.btn_A_status,self.btn_B_status,self.tf_status])
+                    # self.AI_Uart_CMD(0x01,FACTORY_MODE,0x01,cmd_data=[self.btn_A_status,self.btn_B_status,self.tf_status])
+                    self.AI_Uart_CMD_String(cmd=FACTORY_MODE,cmd_type=0x01,cmd_data=[self.btn_A_status,self.btn_B_status,self.tf_status],str_buf=str([self.tf_sn]))
             except Exception as e:
                 s=str(e)
                 print(s)
@@ -756,6 +773,11 @@ class AICamera(object):
         machine.reset()
     
     def switcherMode(self, mode):
+        if(mode==self.k210.mode or self.k210.sw_lock):
+            print('switcherMode return')
+            return
+        
+        self.k210.sw_lock = True
         if(self.k210.mode==GUIDEPOST_MODE):
             self.guidepost.__del__()
             del self.guidepost
@@ -780,23 +802,25 @@ class AICamera(object):
             self.yolo_detect.__del__()
             del self.yolo_detect
             self.yolo_detect=None
+        elif(self.k210.mode==FACE_DETECTION_MODE):
+            self.face_detect.__del__()
+            del self.face_detect
+            self.face_detect=None
         
+        time.sleep(0.1)
+        _cmd = self.uart.read()        
+        del _cmd
         gc.collect()
         
         self.k210 = self.K210()
-        
 
-        time.sleep(0.1)
-        _cmd = self.uart.read()
-        del _cmd
-        time.sleep(0.2)
-        self.AI_Uart_CMD(0x01,0x01,0xFE)
-        time.sleep(0.1)
-        
-        # gc.collect()
-        print(self.k210.mode)
-        self.lcd.draw_string(0,230, 'switcher mode', lcd.WHITE, lcd.BLUE)
-        self.kpu.memtest()
+        for i in range(3):
+            self.AI_Uart_CMD(0x01,0x01,0xFE)
+            time.sleep(0.1)
+    
+        self.lcd.draw_string(0,225, 'switcher mode', lcd.WHITE, lcd.BLUE)
+        self.k210.sw_lock = False
+        print('===switcher mode===')
   
 
     def change_camera(self,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=320,_h=240,_vflip=0,_hmirror=0,_brightness=0,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
@@ -824,7 +848,7 @@ class AICamera(object):
 
     def record(self, path="/sd/capture.avi", interval=100000, quality=50, width=320, height=240, duration=10):
         # self.lcd.init(freq=15000000, invert=1)
-        # self.sensor.reset()
+        self.sensor.reset()
         self.sensor.set_pixformat(sensor.RGB565)
         self.sensor.set_framesize(sensor.QVGA)
         self.sensor.set_windowing((width, height))
@@ -936,13 +960,44 @@ class AICamera(object):
     def led_test(self):
         for i in range(2):
             self.led.on()
-            time.sleep(1)
+            time.sleep(1.5)
             self.led.off()
 
     def button_update_status(self):
         self.btn_A_status = self.btn_A.is_pressed()
         self.btn_B_status = self.btn_B.is_pressed() 
-        time.sleep_ms(20)
+    
+    def sn_write(self,sn):
+        for v in os.listdir('/'):
+            if v == 'flash':
+                with open("/flash/_sn.txt", "w") as f:
+                    f.close()
+            
+                with open("/flash/_sn.txt", "a") as f:
+                    f.write(str(sn))
+                    f.write("\n")
+                    f.close()
+        
+    def sn_read(self):
+        flag = False
+        sn =  ''
+        for v in os.listdir('/'):
+            if v == 'flash': 
+                for v in os.listdir('/flash'):
+                    if v == '_sn.txt':
+                        flag = True
+                        break
+            
+            if(flag):
+                with open("/flash/_sn.txt", "r") as f:
+                    sn = f.readline().rstrip()
+                    f.close()
+                
+                return sn
+            else:
+                return ''
+    
+       
     
 try:
     aiCamera=AICamera()
