@@ -27,7 +27,7 @@ import video
 utils.gc_heap_size(0x60000) 
 """ 
 -------------------------------------------------------------------------------------------------------
-盛思OWL初始化
+盛思2.0 初始化
 -------------------------------------------------------------------------------------------------------
 """
 DEFAULT_MODE = 1
@@ -102,7 +102,7 @@ class AICamera(object):
         fm.register(32, fm.fpioa.UART2_TX, force=True)
         fm.register(33, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
-        self.uart.init(1152000, 8, None, read_buf_len=4096)
+        self.uart.init(1152000, 8, None, read_buf_len=2048)
         time.sleep(0.1)
         self.lcd = lcd
         self.kpu = kpu
@@ -306,6 +306,7 @@ class AICamera(object):
                     self.reset()
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
                     print("$$$")
+                    self.del_uart_rxbuf()
                     self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
                     self.k210.mode = MNIST_MODE
@@ -726,10 +727,12 @@ class AICamera(object):
         machine.reset()
     
     def switcherMode(self, mode):
-        if(mode==self.k210.mode or self.k210.sw_lock):
+        if(self.k210.mode==DEFAULT_MODE or mode==self.k210.mode or self.k210.sw_lock):
             print('switcherMode return')
-            return
+            self.lcd.draw_string(100,220, 'switchering', lcd.WHITE, lcd.RGB)
+            return False
         
+        self.lcd.draw_string(10,220, 'switcher mode', lcd.WHITE, lcd.BLUE)
         self.k210.sw_lock = True
         if(self.k210.mode==GUIDEPOST_MODE):
             self.guidepost.__del__()
@@ -759,18 +762,20 @@ class AICamera(object):
             self.face_detect.__del__()
             del self.face_detect
             self.face_detect=None
+        elif(self.k210.mode==FACE_RECOGNIZATION_MODE):
+            self.fac.__del__()
+            del self.fac
+            self.fac=None
         
-        time.sleep(0.1)
-        _cmd = self.uart.read()        
-        del _cmd
-        gc.collect()
         self.k210 = self.K210()
+        # time.sleep(1)
 
-        for i in range(3):
+        for i in range(100):
             self.AI_Uart_CMD(0x01,0x01,0xFE)
-            time.sleep(0.1)
+            time.sleep(0.01)
+        # self.AI_Uart_CMD(0x01,0x01,0xFE)
+        self.lcd.draw_string(10,220, 'switcher done', lcd.WHITE, lcd.GREEN)
     
-        self.lcd.draw_string(0,225, 'switcher mode', lcd.WHITE, lcd.BLUE)
         self.k210.sw_lock = False
         print('===switcher mode===')
   
@@ -867,6 +872,11 @@ class AICamera(object):
         v.__del__()
         gc.collect()
         self.lcd.clear()
+
+    def del_uart_rxbuf(self,num=1024):
+        tmp = self.uart.read(num)
+        del tmp
+        gc.collect()
     
 try:
     aiCamera=AICamera()
