@@ -102,8 +102,10 @@ class AICamera(object):
         fm.register(10, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
         # self.uart.init(1152000, 8, None, 1, read_buf_len=128)
-        self.uart.init(1152000, 8, None, read_buf_len=2048)
+        self.uart.init(1152000, 8, None, read_buf_len=512)
         time.sleep(0.1)
+        # k210 flag
+        self.k210 = self.K210()
         self.lcd = lcd
         self.kpu = kpu
         self.sensor = sensor
@@ -133,8 +135,6 @@ class AICamera(object):
         self.tf_status = 0
         self.tf_sn =  ''
 
-        # k210 flag
-        self.k210 = self.K210()
         self.slc = None
         self.asr = None
         self.yolo_detect = None
@@ -228,7 +228,8 @@ class AICamera(object):
                             self.AI_Uart_CMD(0x01,0x01,0x00)
                         elif(res and res[0]==0x01 and res[1]==0x01):
                             self.AI_Uart_CMD(0x01,0x01,0x01)
-                            time.sleep_ms(100)
+                            time.sleep_ms(200)
+                            self.del_uart_rxbuf()
                             break
                         elif(res and res[0]==0x01 and res[1]==0xFF):
                             self.reset()
@@ -236,25 +237,25 @@ class AICamera(object):
                     # print(head)
                     # print('==head==')
                     # print('**^**')
-                    _cmd = self.uart.read()
-                    del _cmd
-                    gc.collect()
+                    # self.del_uart_rxbuf()
+                    pass
     
     def uart_handle(self):
         CMD_TEMP = []
         checksum = 0
         if(self.uart.any()):
-            head = self.uart.read(2)
-            if(head and head[0] == 0xAA and head[1]==0xBB):
+            head = self.uart.read(1)
+            if(head and head[0] == 0xAA):
+                head_1 = self.uart.read(1)
                 CMD_TEMP.extend([0xAA,0xBB])
-                time.sleep_ms(1)
+                # time.sleep_ms(1)
                 cmd_type = self.uart.read(1)
                 if(cmd_type==None or len(cmd_type)==0):
                     print('@')
                     return
                 CMD_TEMP.append(cmd_type[0])
                 if(CMD_TEMP[2]==0x01):
-                    time.sleep_ms(2)
+                    time.sleep_ms(1)
                     res = self.uart.read(11)
                     if(res==None or len(res)!=11):
                         print(res)
@@ -263,11 +264,9 @@ class AICamera(object):
                     for i in range(11):
                         CMD_TEMP.append(res[i])                  
                     checksum = self.CheckCode(CMD_TEMP[:13])
+                    # lcd.draw_string(0,150, str(CMD_TEMP), lcd.WHITE, lcd.BLUE)
                     if(res and checksum == CMD_TEMP[13]):
                         self.process_cmd(CMD_TEMP)
-                    # else:
-                    #     print(CMD_TEMP)
-                    #     print('===CMD_TEMP====')
                 elif(CMD_TEMP[2]==0x02):
                     time.sleep_ms(5)
                     res = self.uart.read(6)
@@ -293,11 +292,12 @@ class AICamera(object):
                     self.process_cmd(CMD_TEMP)  
                     # print(str(str_temp.decode('UTF-8','ignore')))
             else:
+                # lcd.draw_string(0,200, str(head)+str(time.time()), lcd.WHITE, lcd.GREEN)
                 # print(head)
                 # print('==head==')
                 # print('**^**')
-                # del _cmd
-                gc.collect()
+                # self.del_uart_rxbuf()
+                pass
 
     def process_cmd(self,cmd):
         CMD = cmd
@@ -327,7 +327,6 @@ class AICamera(object):
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x05):
                     self.led_test()
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
-                    print("$$$")
                     self.del_uart_rxbuf()
                     self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
@@ -527,9 +526,24 @@ class AICamera(object):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
                     data = _str.split("|")
-                    print(data)
+                    # print(data)
+                    lcd.draw_string(0,200, str(data[0]), lcd.WHITE, lcd.GREEN)
+                    if(data[0] == 'xunfei_3_2.kmodel'):
+                        data[0] = 0x450000
+                        data[1] = 224
+                        data[2] = 224
+                        data[3] = [3.8125, 3.8125, 5.375, 5.375, 7.1875, 7.1875, 11.25, 11.3125, 9.125, 9.125]
+                    elif(data[0] == 'xunfei_3_3.kmodel'):
+                        data[0] = 0x650000
+                        data[1] = 224
+                        data[2] = 224
+                        data[3] = [3.8125, 3.8125, 5.375, 5.375, 7.1875, 7.1875, 11.25, 11.3125, 9.125, 9.125]
+                    else:
+                        data[1] = int(data[1])
+                        data[2] = int(data[2])
+                        data[3] = eval(data[3])
                     self.k210.mode = KPU_YOLO_MODEL_MODE
-                    self.kpu_yolo_model = KPU_YOLO_KMODEL(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=int(data[1]),height=int(data[2]),anchors=eval(data[3]))
+                    self.kpu_yolo_model = KPU_YOLO_KMODEL(sensor=self.sensor,kpu=self.kpu,lcd=self.lcd,model=data[0],width=data[1],height=data[2],anchors=data[3])
                 elif(CMD[3]==DEFAULT_MODE and CMD[4]==0xFA):
                     str_temp = bytes(CMD[9:-1])
                     _str = str(str_temp.decode('UTF-8','ignore'))
@@ -552,7 +566,7 @@ class AICamera(object):
         num = 0
         while True:
             gc.collect()
-            time.sleep_ms(2)
+            # time.sleep_ms(2)
           
             try:
                 self.uart_handle()
@@ -617,7 +631,7 @@ class AICamera(object):
                     if(self.k210.flag_add):
                         self.fac.add_face()
                     if(self.k210.flag_fac_recognize):
-                        time.sleep_ms(10)
+                        time.sleep_ms(3)
                         tmp = self.fac.face_recognize()
                         if(tmp==None):
                             self.AI_Uart_CMD(0x01,0x05,0x03,cmd_data=[0xff])
@@ -1001,7 +1015,7 @@ class AICamera(object):
             else:
                 return ''
             
-    def del_uart_rxbuf(self,num=1024):
+    def del_uart_rxbuf(self,num=512):
         tmp = self.uart.read(num)
         del tmp
         gc.collect()
