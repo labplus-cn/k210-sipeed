@@ -1,0 +1,10 @@
+0x0 labplus.bin 2M
+0x300000_FaceDetection   380K
+0x380000_FaceLandmarkDetection  245K
+0x3d0000_FeatureExtraction    360K
+0x450000 3_2.kmodel  1.9M
+0x650000 3_3.kmodel  1.9M
+0x850000_sipeed_learn_model  1.9M
+0xa50000_Noto_Sans_CJK_SC_Light16 1.9M
+0xc50000 qingjiao3_0xc50000.kmodel 2M
+0xf00000_maixpy_spiffs.img 1M

@@ -63,6 +63,32 @@ python3 make.py -b owl_gansu build
 
 `clean` 会删除整个 `build/`，包括之前生成的固件。
 
+## 一条命令打包三分区固件
+
+编译得到 `build/labplus.bin` 后，在 `projects/labplus` 目录运行以下 PowerShell 命令，为 3.1 摄像头生成 `build/labplus_owl_2024.kfpkg`。
+
+```powershell
+py -3 .\pack_firmware.py -b owl_2024
+```
+
+在 Linux 或 WSL 中执行同样的打包操作。
+
+```sh
+python3 pack_firmware.py -b owl_2024
+```
+
+脚本按板型配置将 [`tools/spiffs/fs`](../../tools/spiffs/fs/) 生成 SPIFFS 镜像，和主程序、模型一起写入 KFlash 烧录包。
+
+| Flash 地址 | 输入 |
+| --- | --- |
+| `0x000000` | 主程序，默认 `build/labplus.bin` |
+| `0x300000` | 3.1 默认使用 [模型分区镜像](k210_model/labplus_owl_2024_models_0x300000.bin) |
+| `0xF00000` | 由 SPIFFS 源文件目录生成的 1 MiB 镜像 |
+
+默认使用 `tools/spiffs/mkspiffs/mkspiffs`。Windows 可使用同目录的 `mkspiffs.exe`，或通过 WSL 运行 Linux 版本。若工具位于其他位置，用 `--mkspiffs` 指定编译时采用 MaixPy SPIFFS 格式的可执行文件。脚本也接受 `--firmware`、`--fs-dir` 和 `--output`，已有 SPIFFS 镜像时可用 `--spiffs` 代替源文件目录。
+
+3.1 模型镜像由原来的 `0x300000_20241018.bin` 重命名而来。其他 Owl 板型通过 `--models` 显式指定对应的模型分区镜像，3.1 也可用该参数覆盖默认值。脚本检查分区重叠和 SPIFFS 镜像大小，主程序和模型镜像需与所选板型对应。打包命令生成文件，实际烧录由 KFlash 完成。
+
 ## 启动与代码位置
 
 - [main/src/main.cpp](main/src/main.cpp) 调用 MaixPy 的 `maixpy_main()`。[MaixPy 启动代码](../../components/micropython/port/src/maixpy_main.c) 初始化硬件和 MicroPython，挂载 Flash、尝试挂载 SD 卡，再执行固化的 `_boot.py`。
@@ -72,7 +98,7 @@ python3 make.py -b owl_gansu build
 
 ## 当前发布限制
 
-- `mkfs` 和 `pack` 的清单映射只有 1956、Owl、Classroom Kit。Owl Gansu、Box、2024 和 Dog 缺少对应映射，调用这两个子命令会触发 `KeyError`。
+- 旧版 `make.py mkfs` 和 `make.py pack` 的清单映射只有 1956、Owl、Classroom Kit。Owl Gansu、Box、2024 和 Dog 缺少对应映射，调用这两个子命令会触发 `KeyError`。
 - `mkfs` 传入 `pack -d … -o …`，当前 [SPIFFS 镜像工具](../../tools/spiffs/gen_spiffs_image.py) 只接受板型配置文件路径，且脚本内含固定的 Linux 路径。 `pack` 引用的 `tools/kfpkg/make_kfpkg.py` 在当前仓库中缺失。
 - 标准 Owl 的 [烧录清单](release/labplus_owl_manifest.json) 与固件读取地址有差异。下表记录当前源码中的两个值，制作可用烧录包前需核对对应板型的完整 Flash 布局。
 
