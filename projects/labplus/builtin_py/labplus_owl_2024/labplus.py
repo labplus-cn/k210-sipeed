@@ -101,6 +101,7 @@ class AICamera(object):
         fm.register(11, fm.fpioa.UART2_TX, force=True)
         fm.register(10, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
+        self._uart_rx = bytearray()
         # self.uart.init(1152000, 8, None, 1, read_buf_len=128)
         self.uart.init(1152000, 8, None, read_buf_len=4096)
         time.sleep(0.1)
@@ -215,90 +216,86 @@ class AICamera(object):
             print('{:2x}'.format(date[i]),end=' ')
         print('')
 
-    def send_to_zkb_init(self): 
+    def _uart_read_pending(self):
+        pending = self.uart.any()
+        if pending:
+            data = self.uart.read(pending)
+            if data:
+                self._uart_rx.extend(data)
+
+    def _uart_find_header(self, start):
+        buf = self._uart_rx
+        while start + 1 < len(buf):
+            if buf[start] == 0xAA and buf[start + 1] == 0xBB:
+                return start
+            start += 1
+        # Keep a trailing 0xAA in case 0xBB arrives on the next poll.
+        if start < len(buf) and buf[start] == 0xAA:
+            return start
+        return len(buf)
+
+    def _uart_handshake(self):
+        self._uart_read_pending()
+        start = self._uart_find_header(0)
+        buf = self._uart_rx
+        while len(buf) - start >= 12:
+            if buf[start + 2] != 0x01 or buf[start + 3] != 0x01:
+                start = self._uart_find_header(start + 1)
+                continue
+            subcommand = buf[start + 4]
+            if subcommand not in (0x00, 0x01, 0xFF):
+                start = self._uart_find_header(start + 1)
+                continue
+            # Consume only the handshake frame, preserving any following data.
+            next_start = start + 12
+            if subcommand == 0xFF:
+                self.reset()
+            else:
+                self.AI_Uart_CMD(0x01, 0x01, subcommand)
+                if subcommand == 0x01:
+                    self._uart_rx = buf[next_start:]
+                    time.sleep_ms(100)
+                    return True
+            start = self._uart_find_header(next_start)
+        self._uart_rx = buf[start:]
+        return False
+
+    def send_to_zkb_init(self):
         while True:
             gc.collect()
             time.sleep_ms(10)
-            if(self.uart.any()):
-                head=self.uart.read(2)
-                if(head and head[0]==0xAA and head[1]==0xBB):
-                    cmd_type = self.uart.read(1)
-                    if(cmd_type[0]==0x01):
-                        res=self.uart.read(9)
-                        if(res and res[0]==0x01 and res[1]==0x00):
-                            self.AI_Uart_CMD(0x01,0x01,0x00)
-                        elif(res and res[0]==0x01 and res[1]==0x01):
-                            self.AI_Uart_CMD(0x01,0x01,0x01)
-                            time.sleep_ms(100)
-                            break
-                        elif(res and res[0]==0x01 and res[1]==0xFF):
-                            self.reset()
-                else:
-                    # print(head)
-                    # print('==head==')
-                    # print('**^**')
-                    _cmd = self.uart.read()
-                    del _cmd
-                    gc.collect()
-    
+            if self._uart_handshake():
+                return
+
     def uart_handle(self):
-        CMD_TEMP = []
-        checksum = 0
-        if(self.uart.any()):
-            head = self.uart.read(2)
-            if(head and head[0] == 0xAA and head[1]==0xBB):
-                CMD_TEMP.extend([0xAA,0xBB])
-                time.sleep_ms(1)
-                cmd_type = self.uart.read(1)
-                if(cmd_type==None or len(cmd_type)==0):
-                    print('@')
-                    return
-                CMD_TEMP.append(cmd_type[0])
-                if(CMD_TEMP[2]==0x01):
-                    time.sleep_ms(2)
-                    res = self.uart.read(11)
-                    if(res==None or len(res)!=11):
-                        print(res)
-                        print('#')
-                        return
-                    for i in range(11):
-                        CMD_TEMP.append(res[i])                  
-                    checksum = self.CheckCode(CMD_TEMP[:13])
-                    if(res and checksum == CMD_TEMP[13]):
-                        self.process_cmd(CMD_TEMP)
-                    # else:
-                    #     print(CMD_TEMP)
-                    #     print('===CMD_TEMP====')
-                elif(CMD_TEMP[2]==0x02):
-                    time.sleep_ms(5)
-                    res = self.uart.read(6)
-                    if(res==None or len(res)!=6):
-                        print('&')
-                        return
-                    time.sleep_ms(20)
-                    str_len = res[5]
-                    str_temp = self.uart.read(str_len)
-                    if(str_temp==None or len(str_temp)!=str_len):
-                        print('&&')
-                        return
-                    time.sleep_ms(5)
-                    checksum  = self.uart.read(1)
-                    if(checksum==None or len(checksum)!=1):
-                        print('&&&')
-                        return
-                    for i in range(6):
-                        CMD_TEMP.append(res[i]) 
-                    for i in range(str_len):
-                        CMD_TEMP.append(str_temp[i])
-                    CMD_TEMP.append(checksum[0]) 
-                    self.process_cmd(CMD_TEMP)  
-                    # print(str(str_temp.decode('UTF-8','ignore')))
+        self._uart_read_pending()
+        buf = self._uart_rx
+        start = self._uart_find_header(0)
+        while len(buf) - start >= 3:
+            frame_type = buf[start + 2]
+            if frame_type == 0x01:
+                size = 14
+            elif frame_type == 0x02:
+                if len(buf) - start < 9:
+                    break
+                size = 10 + buf[start + 8]
             else:
-                # print(head)
-                # print('==head==')
-                # print('**^**')
-                # del _cmd
-                gc.collect()
+                start = self._uart_find_header(start + 1)
+                continue
+
+            end = start + size
+            if end > len(buf):
+                break
+            if frame_type == 0x01 and self.CheckCode(buf[start:end - 1]) != buf[end - 1]:
+                # A missing byte may have exposed the next header inside this span.
+                start = self._uart_find_header(start + 1)
+                continue
+            try:
+                self.process_cmd(buf[start:end])
+            except Exception as e:
+                print("[uart_handle]", e)
+            start = self._uart_find_header(end)
+        self._uart_rx = buf[start:]
 
     def process_cmd(self,cmd):
         CMD = cmd
@@ -817,8 +814,6 @@ class AICamera(object):
             self.face_detect=None
         
         time.sleep(0.1)
-        _cmd = self.uart.read()        
-        del _cmd
         gc.collect()
         self.k210 = self.K210()
 

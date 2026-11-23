@@ -132,6 +132,8 @@ while(True):
 
 参考 [构建文档](build.md)
 
+Labplus K210 固件的板型选择、构建命令和当前打包限制见 [Labplus 项目说明](projects/labplus/README.md)。
+
 旧的构建版本请见 [historic 分支](https://github.com/sipeed/MaixPy/tree/historic) （不再维护，仅仅为了保留提交记录）
 
 ## 使用在线编译工具定制固件

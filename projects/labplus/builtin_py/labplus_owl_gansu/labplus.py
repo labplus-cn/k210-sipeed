@@ -101,6 +101,7 @@ class AICamera(object):
         fm.register(11, fm.fpioa.UART2_TX, force=True)
         fm.register(10, fm.fpioa.UART2_RX, force=True)
         self.uart = UART(UART.UART2)
+        self._uart_rx = bytearray()
         # self.uart.init(1152000, 8, None, 1, read_buf_len=128)
         self.uart.init(1152000, 8, None, read_buf_len=512)
         time.sleep(0.1)
@@ -214,105 +215,90 @@ class AICamera(object):
             print('{:2x}'.format(date[i]),end=' ')
         print('')
 
-    def send_to_zkb_init(self): 
-        """优化后的串口初始化握手流程，增加粘包处理和debug输出"""
-        retry_count = 0
-        max_retry = 100
-        rx_buf = bytearray()
-        while retry_count < max_retry:
+    def _uart_read_pending(self):
+        pending = self.uart.any()
+        if pending:
+            data = self.uart.read(pending)
+            if data:
+                self._uart_rx.extend(data)
+
+    def _uart_find_header(self, start):
+        buf = self._uart_rx
+        while start + 1 < len(buf):
+            if buf[start] == 0xAA and buf[start + 1] == 0xBB:
+                return start
+            start += 1
+        # Keep a trailing 0xAA in case 0xBB arrives on the next poll.
+        if start < len(buf) and buf[start] == 0xAA:
+            return start
+        return len(buf)
+
+    def _uart_handshake(self):
+        self._uart_read_pending()
+        start = self._uart_find_header(0)
+        buf = self._uart_rx
+        while len(buf) - start >= 12:
+            if buf[start + 2] != 0x01 or buf[start + 3] != 0x01:
+                start = self._uart_find_header(start + 1)
+                continue
+            subcommand = buf[start + 4]
+            if subcommand not in (0x00, 0x01, 0xFF):
+                start = self._uart_find_header(start + 1)
+                continue
+            # Consume only the handshake frame, preserving any following data.
+            next_start = start + 12
+            if subcommand == 0xFF:
+                self.reset()
+            else:
+                self.AI_Uart_CMD(0x01, 0x01, subcommand)
+                if subcommand == 0x01:
+                    self._uart_rx = buf[next_start:]
+                    time.sleep_ms(100)
+                    return True
+            start = self._uart_find_header(next_start)
+        self._uart_rx = buf[start:]
+        return False
+
+    def send_to_zkb_init(self):
+        for _ in range(100):
             gc.collect()
             time.sleep_ms(50)
             try:
-                if self.uart.any():
-                    data = self.uart.read()
-                    if data:
-                        rx_buf.extend(data)
-                        # 粘包处理：查找包头
-                        while len(rx_buf) >= 12:
-                            # 查找包头
-                            head_idx = -1
-                            for i in range(len(rx_buf)-1):
-                                if rx_buf[i] == 0xAA and rx_buf[i+1] == 0xBB:
-                                    head_idx = i
-                                    break
-                            if head_idx == -1:
-                                rx_buf = bytearray()  # 没有包头，清空
-                                break
-                            if head_idx > 0:
-                                rx_buf = rx_buf[head_idx:]  # 丢弃包头前的数据
-                            if len(rx_buf) < 12:
-                                break
-                            cmd_type = rx_buf[2]
-                            if cmd_type == 0x01:
-                                res = rx_buf[3:12]
-                                if res[0] == 0x01 and res[1] == 0x00:
-                                    self.AI_Uart_CMD(0x01, 0x01, 0x00)
-                                elif res[0] == 0x01 and res[1] == 0x01:
-                                    self.AI_Uart_CMD(0x01, 0x01, 0x01)
-                                    time.sleep_ms(100)
-                                    self.del_uart_rxbuf()
-                                    return
-                                elif res[0] == 0x01 and res[1] == 0xFF:
-                                    self.reset()
-                                rx_buf = rx_buf[12:]  # 处理完一个包，继续处理下一个
-                            else:
-                                rx_buf = rx_buf[1:]  # 非预期命令，丢弃一个字节
-                retry_count += 1
+                if self._uart_handshake():
+                    return
             except Exception as e:
-                print("[send_to_zkb_init] 异常: "+ str(e))
-        if retry_count >= max_retry:
-            print("[send_to_zkb_init] 握手超时，未完成初始化")
+                print("[send_to_zkb_init]", e)
+        print("[send_to_zkb_init] 握手超时，未完成初始化")
 
     def uart_handle(self):
-        """优化后的串口接收处理，支持粘包和多包，自动丢弃无效数据"""
-        rx_buf = bytearray()
-        while True:
-            if self.uart.any():
-                data = self.uart.read()
-                if data:
-                    rx_buf.extend(data)
+        self._uart_read_pending()
+        buf = self._uart_rx
+        start = self._uart_find_header(0)
+        while len(buf) - start >= 3:
+            frame_type = buf[start + 2]
+            if frame_type == 0x01:
+                size = 14
+            elif frame_type == 0x02:
+                if len(buf) - start < 9:
+                    break
+                size = 10 + buf[start + 8]
             else:
-                break  # 没有新数据，跳出循环
+                start = self._uart_find_header(start + 1)
+                continue
 
-            # 粘包处理：查找包头
-            while len(rx_buf) >= 3:
-                # 查找包头
-                head_idx = -1
-                for i in range(len(rx_buf) - 1):
-                    if rx_buf[i] == 0xAA and rx_buf[i + 1] == 0xBB:
-                        head_idx = i
-                        break
-                if head_idx == -1:
-                    rx_buf = bytearray()  # 没有包头，清空
-                    break
-                if head_idx > 0:
-                    rx_buf = rx_buf[head_idx:]  # 丢弃包头前的数据
-                if len(rx_buf) < 3:
-                    break
-                cmd_type = rx_buf[2]
-                # 0x01命令包，长度固定为14字节（包头2+类型1+数据10+校验1）
-                if cmd_type == 0x01:
-                    total_len = 14
-                    if len(rx_buf) < total_len:
-                        break  # 等待数据到齐
-                    pkt = rx_buf[:total_len]
-                    checksum = self.CheckCode(pkt[:13])
-                    if checksum == pkt[13]:
-                        self.process_cmd(pkt)
-                    rx_buf = rx_buf[total_len:]  # 处理完一个包，继续处理下一个
-                # 0x02命令包，长度不定，需读取长度字段
-                elif cmd_type == 0x02:
-                    if len(rx_buf) < 9:
-                        break  # 等待头部数据到齐
-                    str_len = rx_buf[8]
-                    total_len = 9 + str_len + 1  # 包头+类型+数据+字符串+校验
-                    if len(rx_buf) < total_len:
-                        break  # 等待数据到齐
-                    pkt = rx_buf[:total_len]
-                    self.process_cmd(pkt)
-                    rx_buf = rx_buf[total_len:]
-                else:
-                    rx_buf = rx_buf[1:]  # 未知命令，丢弃一个字节
+            end = start + size
+            if end > len(buf):
+                break
+            if frame_type == 0x01 and self.CheckCode(buf[start:end - 1]) != buf[end - 1]:
+                # A missing byte may have exposed the next header inside this span.
+                start = self._uart_find_header(start + 1)
+                continue
+            try:
+                self.process_cmd(buf[start:end])
+            except Exception as e:
+                print("[uart_handle]", e)
+            start = self._uart_find_header(end)
+        self._uart_rx = buf[start:]
 
     def process_cmd(self,cmd):
         CMD = cmd
@@ -342,7 +328,6 @@ class AICamera(object):
                 elif(CMD[3]==0x01 and CMD[4]==99 and CMD[5]==0x05):
                     self.led_test()
                 elif(CMD[3]==0x01 and CMD[4]==0xFE):
-                    self.del_uart_rxbuf()
                     self.switcherMode(CMD[5])
                 elif(CMD[3]==MNIST_MODE and CMD[4]==0x01):
                     self.k210.mode = MNIST_MODE
@@ -1029,14 +1014,7 @@ class AICamera(object):
                 return sn
             else:
                 return ''
-            
-    def del_uart_rxbuf(self,num=512):
-        tmp = self.uart.read(num)
-        del tmp
-        gc.collect()
-    
-       
-    
+
 try:
     aiCamera=AICamera()
 except Exception as e:

@@ -133,6 +133,8 @@ Doc refer to [maixpy.sipeed.com](https://maixpy.sipeed.com)
 
 See [build doc](build.md)
 
+For the Labplus K210 firmware, see the [Labplus project README](projects/labplus/README.md) for board selection, build commands, and release limitations.
+
 The historic version see [historic branch](https://github.com/sipeed/MaixPy/tree/historic) (No longer maintained, just keep commit history)
 
 ## Use online compilation tools to customize firmware
