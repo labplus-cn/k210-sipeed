@@ -7,8 +7,10 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
-from tempfile import TemporaryDirectory
+import sys
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from zipfile import ZIP_DEFLATED, ZipFile
 
 
@@ -88,6 +90,9 @@ def pack(args):
         raise ValueError("Output filename must end in .kfpkg")
     if not args.spiffs and args.fs_dir.resolve() in output.parents:
         raise ValueError("Output must be outside the SPIFFS source directory")
+    persistent_image = (PROJECT / "build" / args.board / "maixpy_spiffs.img").resolve()
+    if not args.spiffs and persistent_image in [path.resolve() for path in inputs]:
+        raise ValueError("SPIFFS image output matches an input file")
     output.parent.mkdir(parents=True, exist_ok=True)
 
     with TemporaryDirectory(prefix=".labplus-pack-", dir=str(output.parent)) as directory:
@@ -95,7 +100,22 @@ def pack(args):
         image = args.spiffs
         if image is None:
             image = temp / "maixpy_spiffs.img"
-            make_spiffs(args.mkspiffs, args.fs_dir, image, config)
+            if args.mkspiffs:
+                make_spiffs(args.mkspiffs, args.fs_dir, image, config)
+            else:
+                generator = SPIFFS / "gen_spiffs_image.py"
+                paths = [generator, config_path, args.fs_dir, image]
+                if os.name == "nt":
+                    paths = [
+                        subprocess.check_output(["wsl.exe", "--exec", "wslpath", "-a", str(path.resolve())],
+                                                encoding="utf-8").strip()
+                        for path in paths
+                    ]
+                    command = ["wsl.exe", "--exec", "python3"]
+                else:
+                    command = [sys.executable]
+                subprocess.run([*command, str(paths[0]), str(paths[1]),
+                                "--dir", str(paths[2]), "--out", str(paths[3])], check=True)
         if image.stat().st_size != spiffs_size:
             raise ValueError(f"SPIFFS image must be exactly 0x{spiffs_size:X} bytes")
 
@@ -113,6 +133,19 @@ def pack(args):
                     "address": address, "bin": name, "sha256Prefix": prefix,
                 })
             archive.writestr("flash-list.json", json.dumps(manifest, indent=4) + "\n")
+        if args.spiffs is None:
+            persistent_image.parent.mkdir(parents=True, exist_ok=True)
+            staged_image = None
+            try:
+                with NamedTemporaryFile(dir=str(persistent_image.parent), delete=False) as staged:
+                    staged_image = staged.name
+                    with image.open("rb") as source:
+                        shutil.copyfileobj(source, staged)
+                os.replace(staged_image, persistent_image)
+            finally:
+                if staged_image and os.path.exists(staged_image):
+                    os.unlink(staged_image)
+            print(f"SPIFFS: {persistent_image}")
         os.replace(temporary_package, output)
     print(f"{args.board}: {output}")
 
@@ -125,10 +158,7 @@ def main():
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--fs-dir", type=Path, default=PROJECT / "spiffs" / "fs")
     source.add_argument("--spiffs", type=Path, help="Use a prebuilt SPIFFS image")
-    mkspiffs = SPIFFS / "mkspiffs" / "mkspiffs"
-    if os.name == "nt" and mkspiffs.with_suffix(".exe").is_file():
-        mkspiffs = mkspiffs.with_suffix(".exe")
-    parser.add_argument("--mkspiffs", type=Path, default=mkspiffs)
+    parser.add_argument("--mkspiffs", type=Path, help="Use an existing mkspiffs executable")
     parser.add_argument("-o", "--output", type=Path)
     args = parser.parse_args()
     board_build = PROJECT / "build" / args.board

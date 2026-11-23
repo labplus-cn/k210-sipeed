@@ -16,6 +16,8 @@ MKSPIFFS_DIR = TOOLS_DIR / "mkspiffs"
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("config_file", type=Path, help="Configuration used to build the firmware")
+    parser.add_argument("-d", "--dir", type=Path, help="SPIFFS source directory")
+    parser.add_argument("-o", "--out", type=Path, help="Output image path")
     args = parser.parse_args()
     config_file = args.config_file.resolve()
     if not config_file.is_file():
@@ -28,7 +30,7 @@ def main():
         parser.error("could not find a project directory above {}".format(config_file))
 
     project_fs = project / "spiffs" / "fs"
-    in_dir = project_fs if project_fs.is_dir() else TOOLS_DIR / "fs"
+    in_dir = args.dir.resolve() if args.dir else (project_fs if project_fs.is_dir() else TOOLS_DIR / "fs")
     if not in_dir.is_dir():
         parser.error("SPIFFS source directory not found: {}".format(in_dir))
 
@@ -49,7 +51,8 @@ def main():
         out_dir = config_file.parent.parent
     else:
         out_dir = project / "build"
-    image = out_dir / "maixpy_spiffs.img"
+    image = args.out.resolve() if args.out else out_dir / "maixpy_spiffs.img"
+    out_dir = image.parent
 
     if not (MKSPIFFS_DIR / "spiffs" / "src" / "spiffs.h").is_file():
         parser.error("mkspiffs source or SPIFFS submodule is missing: {}".format(MKSPIFFS_DIR))

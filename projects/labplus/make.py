@@ -25,11 +25,7 @@ board_configs = {
 cwd = sys.path[0]
 
 # get SDK absolute path
-sdk_path = os.path.abspath(sys.path[0]+"/../../")
-try:
-    sdk_path = os.environ[sdk_env_name]
-except Exception:
-    pass
+sdk_path = os.environ.get("MY_SDK_PATH", os.path.abspath(sys.path[0]+"/../../"))
 print("-- SDK_PATH:{}".format(sdk_path))
 
 
@@ -43,8 +39,8 @@ def main():
     cmd_build.set_defaults(func=build)
 
     cmd_mkfs = subparsers.add_parser('mkfs', help='make a file system image')
-    cmd_mkfs.add_argument('--dir', '-d', help='input files dir', action='store_const', const=None)
-    cmd_mkfs.add_argument('--out', '-o', help='output image file', action='store_const', const=None)
+    cmd_mkfs.add_argument('--dir', '-d', help='input files dir')
+    cmd_mkfs.add_argument('--out', '-o', help='output image file')
     cmd_mkfs.set_defaults(func=mkfs)
 
     cmd_pack = subparsers.add_parser('pack', help='pack all files in to a .kfpgk files')
@@ -81,17 +77,14 @@ def build(args):
         exec(f.read())
 
 def mkfs(args):
-    with open(os.path.join(cwd, manifest_lists[args.board]), 'r') as f:
-        parameters = json.loads(f.read())
-        indir = parameters['filesystem']['indir']
-        image = parameters['filesystem']['image']
-
-    os.chdir(sys.path[0])
-    # 2. construct the file system image
-    cmd = 'python3 ' + os.path.join(sdk_path, 'tools/spiffs/gen_spiffs_image.py') + \
-        ' pack -d ' + indir + \
-        ' -o ' + os.path.join(build_dir, image)
-    os.system(cmd)
+    import subprocess
+    config = os.path.join(cwd, 'config_board_labplus_{}.mk'.format(board_configs[args.board]))
+    cmd = [sys.executable, os.path.join(sdk_path, 'tools', 'spiffs', 'gen_spiffs_image.py'), config]
+    if args.dir:
+        cmd.extend(['--dir', args.dir])
+    if args.out:
+        cmd.extend(['--out', args.out])
+    subprocess.run(cmd, check=True)
 
 def pack(args):
     os.chdir(sys.path[0])
