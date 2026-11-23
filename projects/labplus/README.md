@@ -89,6 +89,18 @@ python3 pack_firmware.py -b owl_2024
 
 3.1 模型镜像由原来的 `0x300000_20241018.bin` 重命名而来。其他 Owl 板型通过 `--models` 显式指定对应的模型分区镜像，3.1 也可用该参数覆盖默认值。脚本检查分区重叠和 SPIFFS 镜像大小，主程序和模型镜像需与所选板型对应。打包命令生成文件，实际烧录由 KFlash 完成。
 
+| 板型 | 项目内的组合模型镜像 |
+| --- | --- |
+| Owl（2.0） | [owl/0x300000.bin](k210_model/owl/0x300000.bin) |
+| Owl 2024（3.1） | [labplus_owl_2024_models_0x300000.bin](k210_model/labplus_owl_2024_models_0x300000.bin) |
+| Owl Gansu（甘肃 v1） | [owl_gansu/0x300000-c50000.bin](k210_model/owl_gansu/0x300000-c50000.bin) |
+
+`owl_gansu/0x300000.bin` 包含 SPIFFS 地址范围，三分区打包时使用上表中的 `0x300000-c50000.bin`。例如，在工程目录执行甘肃版打包命令。
+
+```powershell
+py -3 .\pack_firmware.py -b owl_gansu --models .\k210_model\owl_gansu\0x300000-c50000.bin
+```
+
 ## 启动与代码位置
 
 - [main/src/main.cpp](main/src/main.cpp) 调用 MaixPy 的 `maixpy_main()`。[MaixPy 启动代码](../../components/micropython/port/src/maixpy_main.c) 初始化硬件和 MicroPython，挂载 Flash、尝试挂载 SD 卡，再执行固化的 `_boot.py`。
