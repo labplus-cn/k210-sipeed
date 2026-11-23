@@ -77,7 +77,7 @@ py -3 .\pack_firmware.py -b owl_2024
 python3 pack_firmware.py -b owl_2024
 ```
 
-脚本按板型配置将 [`tools/spiffs/fs`](../../tools/spiffs/fs/) 生成 SPIFFS 镜像，和主程序、模型一起写入 KFlash 烧录包。
+脚本按板型配置将 [`spiffs/fs`](spiffs/fs/) 中的文件生成 SPIFFS 镜像，和主程序、模型一起写入 KFlash 烧录包。
 
 | Flash 地址 | 输入 |
 | --- | --- |

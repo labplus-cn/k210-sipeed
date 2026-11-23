@@ -4,7 +4,7 @@ import argparse
 import os
 import re
 
-in_dir  = "/home/labplus/maixpy/tools/spiffs/fs"
+in_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fs")
 out_dir = "/home/labplus/maixpy/tools/spiffs/fs_image"
 out_name = "maixpy_spiffs.img"
 
@@ -12,6 +12,10 @@ parser = argparse.ArgumentParser(description='generate spiffs image', prog="gen_
 parser.add_argument("config_file", help = "project config file path, MUST the same with firmware's", default="")
 
 args = parser.parse_args()
+
+project_fs = os.path.join(os.path.dirname(os.path.abspath(args.config_file)), "spiffs", "fs")
+if os.path.isdir(project_fs):
+    in_dir = project_fs
 
 if args.config_file == "" or not os.path.exists(args.config_file):
     print("file {} not found".format(args.config_file))

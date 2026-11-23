@@ -123,7 +123,7 @@ def main():
     parser.add_argument("--firmware", type=Path, help="Firmware binary (defaults to the selected board's build directory)")
     parser.add_argument("--models", type=Path, help="Raw model image for 0x300000")
     source = parser.add_mutually_exclusive_group()
-    source.add_argument("--fs-dir", type=Path, default=SPIFFS / "fs")
+    source.add_argument("--fs-dir", type=Path, default=PROJECT / "spiffs" / "fs")
     source.add_argument("--spiffs", type=Path, help="Use a prebuilt SPIFFS image")
     mkspiffs = SPIFFS / "mkspiffs" / "mkspiffs"
     if os.name == "nt" and mkspiffs.with_suffix(".exe").is_file():
