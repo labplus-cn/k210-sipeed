@@ -50,6 +50,9 @@ project_parser.add_argument('--config_file',
                         help='config file path, e.g. config_defaults.mk',
                         metavar='PATH',
                         default="{}/config_defaults.mk".format(project_path))
+project_parser.add_argument('--build-dir',
+                        help='build directory (relative to the project or an absolute path)',
+                        default="build")
 project_parser.add_argument('--verbose',
                         help='for build command, execute `make VERBOSE=1` to compile',
                         action="store_true",
@@ -64,6 +67,7 @@ project_args = project_parser.parse_args()
 
 cwd = sys.path[0]
 os.chdir(cwd)
+build_dir = os.path.abspath(project_args.build_dir)
 
 config_filename = ".config.mk"
 gen_project_type = "Unix Makefiles"
@@ -93,8 +97,9 @@ config_content += '\n'
 if update_config and config_content != config_content_old:
     with open(config_filename, "w") as f:
         f.write(config_content)
-    if os.path.exists("build/config/global_config.mk"):
-        os.remove("build/config/global_config.mk")
+    build_config = os.path.join(build_dir, "config", "global_config.mk")
+    if os.path.exists(build_config):
+        os.remove(build_config)
     print("generate config file at: {}".format(config_filename))
 
 def update_toolchain_path(tool_chain_config_path, config_path, out_path):
@@ -132,9 +137,8 @@ if project_args.cmd == "config":
 elif project_args.cmd == "build" or project_args.cmd == "rebuild":
     print("build now")
     time_start = time.time()
-    if not os.path.exists("build"):
-        os.mkdir("build")
-    os.chdir("build")
+    os.makedirs(build_dir, exist_ok=True)
+    os.chdir(build_dir)
     if not os.path.exists("Makefile") or project_args.cmd == "rebuild":
         if not os.path.isabs(project_args.config_file):
             project_args.config_file = os.path.join(project_path, project_args.config_file)
@@ -144,7 +148,7 @@ elif project_args.cmd == "build" or project_args.cmd == "rebuild":
             exit(1)
         # udpate toolchain config from .config.mk config by --toolchain adn --toolchain_prefix arg 
         new_config_path = None
-        config_filename = os.path.abspath(os.path.join("..", config_filename))
+        config_filename = os.path.join(project_path, config_filename)
         if os.path.exists(config_filename):
             if not os.path.exists("config"):
                 os.makedirs("config")
@@ -152,7 +156,7 @@ elif project_args.cmd == "build" or project_args.cmd == "rebuild":
             update_toolchain_path(config_filename, config_path, new_config_path)
         config_path = config_path if not new_config_path else new_config_path
         # execute cmake command
-        res = subprocess.call(["cmake", "-G", gen_project_type, "-DDEFAULT_CONFIG_FILE={}".format(config_path),  ".."])
+        res = subprocess.call(["cmake", "-G", gen_project_type, "-DDEFAULT_CONFIG_FILE={}".format(config_path), project_path])
         if res != 0:
             exit(1)
     if project_args.verbose:
@@ -170,10 +174,10 @@ elif project_args.cmd == "build" or project_args.cmd == "rebuild":
 # clean
 elif project_args.cmd == "clean":
     print("clean now")
-    if os.path.exists("build"):
-        os.chdir("build")
+    if os.path.exists(build_dir):
+        os.chdir(build_dir)
         p =subprocess.Popen(["make", "clean"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, err = p.communicate("")
+        output, err = p.communicate()
         res = p.returncode
         if res == 0:
             print(output.decode())
@@ -181,23 +185,22 @@ elif project_args.cmd == "clean":
 # distclean    
 elif project_args.cmd == "distclean":
     print("clean now")
-    if os.path.exists("build"):
-        os.chdir("build")
+    if os.path.exists(build_dir):
+        os.chdir(build_dir)
         p =subprocess.Popen(["make", "clean"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, err = p.communicate("")
+        output, err = p.communicate()
         res = p.returncode
         if res == 0:
             print(output.decode())
-        os.chdir("..")
-        shutil.rmtree("build")
+        os.chdir(project_path)
+        shutil.rmtree(build_dir)
     print("clean complete")
 # menuconfig
 elif project_args.cmd == "menuconfig":
     time_start = time.time()
-    if not os.path.exists("build"):
-        os.mkdir("build")
-    os.chdir("build")
-    if not os.path.exists("build/Makefile"):
+    os.makedirs(build_dir, exist_ok=True)
+    os.chdir(build_dir)
+    if not os.path.exists("Makefile"):
         if not os.path.isabs(project_args.config_file):
             project_args.config_file = os.path.join(project_path, project_args.config_file)
         config_path = os.path.abspath(project_args.config_file)
@@ -206,7 +209,7 @@ elif project_args.cmd == "menuconfig":
             exit(1)
         # udpate toolchain config from .config.mk config by --toolchain adn --toolchain_prefix arg 
         new_config_path = None
-        config_filename = os.path.abspath(os.path.join("..", config_filename))
+        config_filename = os.path.join(project_path, config_filename)
         if os.path.exists(config_filename):
             if not os.path.exists("config"):
                 os.makedirs("config")
@@ -214,7 +217,7 @@ elif project_args.cmd == "menuconfig":
             update_toolchain_path(config_filename, config_path, new_config_path)
         config_path = config_path if not new_config_path else new_config_path
         # execute cmake command
-        res = subprocess.call(["cmake", "-G", gen_project_type, "-DDEFAULT_CONFIG_FILE={}".format(config_path),  ".."])
+        res = subprocess.call(["cmake", "-G", gen_project_type, "-DDEFAULT_CONFIG_FILE={}".format(config_path), project_path])
         if res != 0:
             exit(1)
     res = subprocess.call(["make", "menuconfig"])
@@ -231,8 +234,9 @@ elif project_args.cmd == "clean_conf":
     # clean cmake config files
     if os.path.exists(config_filename):
         os.remove(config_filename)
-    if os.path.exists("build/config/"):
-        shutil.rmtree("build/config")
+    build_config = os.path.join(build_dir, "config")
+    if os.path.exists(build_config):
+        shutil.rmtree(build_config)
     # clean flash config file
     flash_file_path = os.path.abspath(sdk_path+"/tools/flash/flash.py")
     with open(flash_file_path) as f:

@@ -119,7 +119,7 @@ def pack(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-b", "--board", choices=BOARDS, required=True)
-    parser.add_argument("--firmware", type=Path, default=PROJECT / "build" / "labplus.bin")
+    parser.add_argument("--firmware", type=Path, help="Firmware binary (defaults to the selected board's build directory)")
     parser.add_argument("--models", type=Path, help="Raw model image for 0x300000")
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--fs-dir", type=Path, default=SPIFFS / "fs")
@@ -130,12 +130,15 @@ def main():
     parser.add_argument("--mkspiffs", type=Path, default=mkspiffs)
     parser.add_argument("-o", "--output", type=Path)
     args = parser.parse_args()
+    board_build = PROJECT / "build" / args.board
+    if args.firmware is None:
+        args.firmware = board_build / "labplus.bin"
     if args.models is None:
         if args.board != "owl_2024":
             parser.error("--models is required for this board")
         args.models = PROJECT / "k210_model" / "labplus_owl_2024_models_0x300000.bin"
     if args.output is None:
-        args.output = PROJECT / "build" / f"labplus_{BOARDS[args.board]}.kfpkg"
+        args.output = board_build / f"labplus_{BOARDS[args.board]}.kfpkg"
     try:
         pack(args)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:

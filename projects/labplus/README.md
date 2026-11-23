@@ -12,8 +12,8 @@
 | Owl 2024 | `owl_2024` | [配置](config_board_labplus_owl_2024.mk) | 240 × 240 | `0xF00000` / 1 MiB |
 | Owl 2024 Box | `owl_box` | [配置](config_board_labplus_owl_2024_box.mk) | 320 × 240 | `0xF00000` / 1 MiB |
 | Classroom Kit | `classroom_kit` | [配置](config_board_labplus_classroom_kit.mk) | 320 × 240 | `0xD00000` / 3 MiB |
-| 1956 | 使用 `project.py` | [配置](config_board_labplus_1956.mk) | 240 × 320 | `0xD00000` / 3 MiB |
-| Amigo | 使用 `project.py` | [配置](config_board_labplus_amigo.mk) | 480 × 320 | `0xD00000` / 3 MiB |
+| 1956 | `1956` | [配置](config_board_labplus_1956.mk) | 240 × 320 | `0xD00000` / 3 MiB |
+| Amigo | `amigo` | [配置](config_board_labplus_amigo.mk) | 480 × 320 | `0xD00000` / 3 MiB |
 
 ### 摄像头版本与串口显示
 
@@ -47,25 +47,25 @@ cd projects/labplus
 | Owl 2024 Box | `python3 make.py -b owl_box build` |
 | Owl Dog | `python3 make.py -b owl_dog build` |
 | Classroom Kit | `python3 make.py -b classroom_kit build` |
-| 1956 | `python3 project.py build --config_file config_board_labplus_1956.mk` |
-| Amigo | `python3 project.py build --config_file config_board_labplus_amigo.mk` |
+| 1956 | `python3 make.py -b 1956 build` |
+| Amigo | `python3 make.py -b amigo build` |
 
-1956 和 Amigo 通过通用构建入口 `project.py` 显式选择配置，其余板型由 `make.py -b` 选择。
+也可以通过通用入口选择配置，例如 `python3 project.py build --config_file config_board_labplus_1956.mk`。
 
 ### 切换板型或重新生成配置
 
-所有板型共用 `build/`，编译完成后固件位于 `build/labplus.bin`。切换板型或修改板型配置（例如串口显示名称）后，先清理旧构建，再运行目标板型的编译命令。以下以切换到甘肃 v1 摄像头为例。
+各板型使用独立的 `build/<板型>/` 目录。例如 3.1 摄像头的固件位于 `build/owl_2024/labplus.bin`，甘肃版位于 `build/owl_gansu/labplus.bin`。切换板型可直接编译，修改某个板型的配置后可清理该板型再重新编译。
 
 ```sh
 python3 make.py -b owl_gansu clean
 python3 make.py -b owl_gansu build
 ```
 
-`clean` 会删除整个 `build/`，包括之前生成的固件。
+`clean` 删除所选板型的构建目录及其中的固件。
 
 ## 一条命令打包三分区固件
 
-编译得到 `build/labplus.bin` 后，在 `projects/labplus` 目录运行以下 PowerShell 命令，为 3.1 摄像头生成 `build/labplus_owl_2024.kfpkg`。
+编译得到 `build/owl_2024/labplus.bin` 后，在 `projects/labplus` 目录运行以下 PowerShell 命令，为 3.1 摄像头生成 `build/owl_2024/labplus_owl_2024.kfpkg`。
 
 ```powershell
 py -3 .\pack_firmware.py -b owl_2024
@@ -81,7 +81,7 @@ python3 pack_firmware.py -b owl_2024
 
 | Flash 地址 | 输入 |
 | --- | --- |
-| `0x000000` | 主程序，默认 `build/labplus.bin` |
+| `0x000000` | 主程序，默认 `build/<板型>/labplus.bin` |
 | `0x300000` | 3.1 默认使用 [模型分区镜像](k210_model/labplus_owl_2024_models_0x300000.bin) |
 | `0xF00000` | 由 SPIFFS 源文件目录生成的 1 MiB 镜像 |
 
@@ -120,4 +120,4 @@ py -3 .\pack_firmware.py -b owl_gansu --models .\k210_model\owl_gansu\0x300000-c
 | 中文字库 | `0x400000` | [`0xA50000`](builtin_py/labplus_owl/display.py#L39) |
 | MNIST | `0x600000` | [`0x610000`](builtin_py/labplus_owl/mnist.py#L16) |
 
-`make.py flash` 固定使用 Linux 串口 `/dev/ttyCH343USB0`，只写入 `build/labplus.bin`。模型、字库和 SPIFFS 镜像需要按板型布局单独写入，或由核对过的烧录包统一写入。
+`make.py flash` 固定使用 Linux 串口 `/dev/ttyCH343USB0`，写入所选板型目录下的 `labplus.bin`。模型、字库和 SPIFFS 镜像需要按板型布局单独写入，或由核对过的烧录包统一写入。

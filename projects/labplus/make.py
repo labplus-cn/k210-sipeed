@@ -11,7 +11,16 @@ manifest_lists = {
     "classroom_kit": "release/labplus_classroom_kit_manifest.json"
 }
 
-build_dir = "build"
+board_configs = {
+    "owl_gansu": "owl_gansu",
+    "owl_box": "owl_2024_box",
+    "owl_2024": "owl_2024",
+    "owl": "owl",
+    "owl_dog": "owl_dog",
+    "classroom_kit": "classroom_kit",
+    "1956": "1956",
+    "amigo": "amigo",
+}
 
 cwd = sys.path[0]
 
@@ -26,7 +35,7 @@ print("-- SDK_PATH:{}".format(sdk_path))
 
 def main():
     parser = argparse.ArgumentParser("make labplus K210 projects")
-    parser.add_argument('--board','-b', choices=['owl_gansu','owl_box','owl_2024', 'owl', 'classroom_kit', 'owl_dog'], help='选择合适的板子, python3 make.py -b owl build', required=True)
+    parser.add_argument('--board','-b', choices=board_configs, help='选择合适的板子, python3 make.py -b owl build', required=True)
 
     subparsers = parser.add_subparsers(dest='subcommand',help='select the task')
 
@@ -51,27 +60,16 @@ def main():
     if args.subcommand is None:
         parser.print_help()
         parser.exit(1)
+    global build_dir
+    build_dir = os.path.join(cwd, "build", args.board)
     args.func(args)
 
 
 
 def build(args):
-    if args.board == '1956':
-        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_1956.mk']
-    if args.board == 'owl_2024':
-        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_2024.mk']
-    if args.board == 'owl_box':
-        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_2024_box.mk']
-    if args.board == 'owl_gansu':
-        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_gansu.mk']
-    if args.board == 'owl':
-        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl.mk']
-    if args.board == 'owl_dog':
-        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_owl_dog.mk']
-    if args.board == 'classroom_kit':
-        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_classroom_kit.mk']
-    if args.board == 'amigo':
-        sys.argv = [sys.argv[0], 'build', '--config_file', 'config_board_labplus_amigo.mk']
+    sys.argv = [sys.argv[0], 'build', '--config_file',
+                'config_board_labplus_{}.mk'.format(board_configs[args.board]),
+                '--build-dir', build_dir]
     os.environ['BOARD_NAME'] = args.board
 
     sdk_env_name = "MY_SDK_PATH"
@@ -126,18 +124,17 @@ def flash(args):
     #     exit(2)
     # dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0004)   # set CP2104.GPIO2 = 0
 
-    cmd = 'kflash' + '  -B kd233 -p /dev/ttyUSB0 -b 1500000' + ' build/labplus.bin'
-    cmd = 'kflash' + '  -p /dev/ttyCH343USB0 -b 2000000' + ' build/labplus.bin'
-    # cmd = 'kflash' + '  -p /dev/ttyUSB0 -b 2000000' + ' build/labplus.bin'
-    os.system(cmd)
+    import subprocess
+    subprocess.run(['kflash', '-p', '/dev/ttyCH343USB0', '-b', '2000000',
+                    os.path.join(build_dir, 'labplus.bin')], check=True)
     
     # dev.ctrl_transfer(0x41, 0xff, 0x37E1, 0x0404)   # set CP2104.GPIO2 = 1
 
 def clean(args):
     import shutil
-    if os.path.exists("./build"):
-        shutil.rmtree("./build")
-        print("cleaned. ")
+    if os.path.exists(build_dir):
+        shutil.rmtree(build_dir)
+        print("cleaned {}.".format(build_dir))
 
 if __name__ == "__main__":
     main()

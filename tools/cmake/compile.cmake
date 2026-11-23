@@ -15,7 +15,7 @@ get_filename_component(parent_dir_name ${parent_dir} NAME)
 # Set project dir, so just projec can include this cmake file!!!
 set(PROJECT_SOURCE_DIR ${parent_dir})
 set(PROJECT_PATH       ${PROJECT_SOURCE_DIR})
-set(PROJECT_BINARY_DIR "${parent_dir}/build")
+set(PROJECT_BINARY_DIR "${CMAKE_BINARY_DIR}")
 message(STATUS "SDK_PATH:${SDK_PATH}")
 message(STATUS "PROJECT_PATH:${PROJECT_SOURCE_DIR}")
 
@@ -132,7 +132,7 @@ macro(project name)
     
     get_filename_component(current_dir ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
     set(PROJECT_SOURCE_DIR ${current_dir})
-    set(PROJECT_BINARY_DIR "${current_dir}/build")
+    set(PROJECT_BINARY_DIR "${CMAKE_BINARY_DIR}")
 
     # Find components in SDK's components folder, register components
     file(GLOB component_dirs ${SDK_PATH}/components/*)

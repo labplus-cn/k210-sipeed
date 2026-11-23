@@ -103,7 +103,7 @@ if __name__ == '__main__':
     print("-- flash start")
     ############## Add flash command here ################
     if project_path != "":
-        firmware = project_path+"/build/"+project_name+".bin"
+        firmware = os.path.join(build_dir, project_name + ".bin")
     if not os.path.exists(firmware):
         print("[ERROR] Firmware not found:{}".format(firmware))
         exit(1)
