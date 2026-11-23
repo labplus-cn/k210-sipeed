@@ -15,25 +15,53 @@
 | 1956 | 使用 `project.py` | [配置](config_board_labplus_1956.mk) | 240 × 320 | `0xD00000` / 3 MiB |
 | Amigo | 使用 `project.py` | [配置](config_board_labplus_amigo.mk) | 480 × 320 | `0xD00000` / 3 MiB |
 
+### 摄像头版本与串口显示
+
+进入 MicroPython 串口 REPL 后，欢迎语会显示下表中的板型名称，后接 `with kendryte-k210`。`os.uname().machine` 也使用同一名称。显示值来自编译时选择的板型配置。
+
+| 摄像头版本 | 构建参数 | 串口显示的板型名称 |
+| --- | --- | --- |
+| 2.0 摄像头 | `-b owl` | `labplus_owl (2.0摄像头)` |
+| 3.1 摄像头 | `-b owl_2024` | `labplus_owl_2024 (3.1摄像头)` |
+| 甘肃 v1 摄像头 | `-b owl_gansu` | `labplus_owl_gansu (甘肃v1摄像头)` |
+
 ## 从源码构建
 
 按[仓库构建文档](../../build.md)初始化 Git 子模块，安装 Python 3、CMake、GNU Make 和 Kendryte RISC-V 交叉工具链。板型配置默认使用 `/opt/kendryte-toolchain/bin` 下的 `riscv64-unknown-elf-` 工具链，路径以实际安装位置为准。
 
-从仓库根目录进入工程，以标准 Owl 为例构建：
+### 按板型编译
+
+从仓库根目录进入 Labplus 工程。
 
 ```sh
 cd projects/labplus
-python3 make.py -b owl build
 ```
 
-固件产物为 `build/labplus.bin`。各板型共用该输出路径，切换板型前可在工程目录运行 `python3 make.py -b owl clean` 清理上一次的 `build/`。
+在该目录运行对应的一条命令。
 
-1956 和 Amigo 的配置文件已存在，当前 `make.py` 的板型选项未开放这两项，可在工程目录使用通用入口并显式指定配置：
+| 板型 | 编译命令 |
+| --- | --- |
+| Owl（2.0 摄像头） | `python3 make.py -b owl build` |
+| Owl 2024（3.1 摄像头） | `python3 make.py -b owl_2024 build` |
+| Owl Gansu（甘肃 v1 摄像头） | `python3 make.py -b owl_gansu build` |
+| Owl 2024 Box | `python3 make.py -b owl_box build` |
+| Owl Dog | `python3 make.py -b owl_dog build` |
+| Classroom Kit | `python3 make.py -b classroom_kit build` |
+| 1956 | `python3 project.py build --config_file config_board_labplus_1956.mk` |
+| Amigo | `python3 project.py build --config_file config_board_labplus_amigo.mk` |
+
+1956 和 Amigo 通过通用构建入口 `project.py` 显式选择配置，其余板型由 `make.py -b` 选择。
+
+### 切换板型或重新生成配置
+
+所有板型共用 `build/`，编译完成后固件位于 `build/labplus.bin`。切换板型或修改板型配置（例如串口显示名称）后，先清理旧构建，再运行目标板型的编译命令。以下以切换到甘肃 v1 摄像头为例。
 
 ```sh
-python3 project.py build --config_file config_board_labplus_1956.mk
-python3 project.py build --config_file config_board_labplus_amigo.mk
+python3 make.py -b owl_gansu clean
+python3 make.py -b owl_gansu build
 ```
+
+`clean` 会删除整个 `build/`，包括之前生成的固件。
 
 ## 启动与代码位置
 

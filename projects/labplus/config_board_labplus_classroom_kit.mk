@@ -70,6 +70,7 @@ CONFIG_FREEROTS_MINIMUM_STACK_SIZE=2048
 # end of Kendryte SDK configurations
 
 CONFIG_COMPONENT_MICROPYTHON_ENABLE=y
+CONFIG_MAIXPY_BOARD_NAME="labplus_classroom_kit"
 
 #
 # Micropython configurations

@@ -787,59 +787,69 @@ class AICamera(object):
         time.sleep_ms(10)
         machine.reset()
     
-    def switcherMode(self, mode):
-        if(self.k210.mode==DEFAULT_MODE or mode==self.k210.mode or self.k210.sw_lock):
-            print('switcherMode return')
-            self.lcd.draw_string(100,220, 'switchering', lcd.WHITE, lcd.RGB)
-            return False
-        
-        self.lcd.draw_string(10,220, 'switcher mode', lcd.WHITE, lcd.BLUE)
-        self.k210.sw_lock = True
-        if(self.k210.mode==GUIDEPOST_MODE):
-            self.guidepost.__del__()
-            del self.guidepost
-            self.guidepost=None
-        elif(self.k210.mode==TRACK_MODE):
-            self.track.__del__()
-            del self.track
-            self.track=None
-        elif(self.k210.mode==COLOR_STATISTICS_MODE):
-            self.color_statistics.__del__()
-            del self.color_statistics
-            self.color_statistics=None
-        elif(self.k210.mode==APRILTAG_MODE):
-            self.apriltag.__del__()
-            del self.apriltag
-            self.apriltag=None
-        elif(self.k210.mode==SELF_LEARNING_CLASSIFIER_MODE):
-            self.slc.__del__()
-            del self.slc
-            self.slc=None
-        elif(self.k210.mode==OBJECT_RECOGNIZATION_MODE):
-            self.yolo_detect.__del__()
-            del self.yolo_detect
-            self.yolo_detect=None
-        elif(self.k210.mode==FACE_DETECTION_MODE):
-            self.face_detect.__del__()
-            del self.face_detect
-            self.face_detect=None
-        elif(self.k210.mode==FACE_RECOGNIZATION_MODE):
-            self.fac.__del__()
-            del self.fac
-            self.fac=None
-        
-        self.k210 = self.K210()
-        # time.sleep(1)
+    _MODE_OBJECTS = {
+        MNIST_MODE: "mnist",
+        OBJECT_RECOGNIZATION_MODE: "yolo_detect",
+        FACE_DETECTION_MODE: "face_detect",
+        FACE_RECOGNIZATION_MODE: "fac",
+        SELF_LEARNING_CLASSIFIER_MODE: "slc",
+        COLOE_MODE: "color",
+        QRCODE_MODE: "qrcode",
+        SPEECH_RECOGNIZATION_MODE: "asr",
+        GUIDEPOST_MODE: "guidepost",
+        KPU_MODEL_MODE: "kpu_model",
+        TRACK_MODE: "track",
+        COLOR_STATISTICS_MODE: "color_statistics",
+        COLOR_EXTRACTO_MODE: "color_ex",
+        APRILTAG_MODE: "apriltag",
+        KPU_YOLO_MODEL_MODE: "kpu_yolo_model",
+    }
 
-        for i in range(100):
-            self.AI_Uart_CMD(0x01,0x01,0xFE)
-            time.sleep(0.01)
-        # self.AI_Uart_CMD(0x01,0x01,0xFE)
-        self.lcd.draw_string(10,220, 'switcher done', lcd.WHITE, lcd.GREEN)
-    
-        self.k210.sw_lock = False
-        print('===switcher mode===')
-  
+    def _release_mode_objects(self):
+        # Include stale references left by an incomplete mode transition.
+        for name in self._MODE_OBJECTS.values():
+            obj = getattr(self, name, None)
+            if obj is None:
+                continue
+            setattr(self, name, None)
+            try:
+                release = getattr(obj, "__del__", None)
+                if release is not None:
+                    release()
+            except Exception as e:
+                print("[switcherMode] release", name, e)
+
+    def switcherMode(self, mode):
+        current_mode = self.k210.mode
+        if self.k210.sw_lock:
+            return False
+        if current_mode != DEFAULT_MODE and mode == current_mode:
+            name = self._MODE_OBJECTS.get(current_mode)
+            if name is None or getattr(self, name, None) is not None:
+                return False
+
+        self.k210.sw_lock = True
+        try:
+            self._release_mode_objects()
+            gc.collect()
+            self.k210 = self.K210()
+            self.k210.sw_lock = True
+
+            if current_mode == DEFAULT_MODE:
+                # The previous switch may have completed before its reply arrived.
+                self.AI_Uart_CMD(0x01, 0x01, 0xFE)
+            else:
+                for _ in range(100):
+                    self.AI_Uart_CMD(0x01, 0x01, 0xFE)
+                    time.sleep_ms(10)
+        finally:
+            self.k210.sw_lock = False
+
+        try:
+            self.lcd.draw_string(10, 220, 'switcher done', lcd.WHITE, lcd.GREEN)
+        except Exception as e:
+            print("[switcherMode] display", e)
+        return True
 
     def change_camera(self,_framesize=sensor.QVGA,_pixformat=sensor.RGB565,_w=320,_h=240,_vflip=0,_hmirror=0,_brightness=0,_contrast=0,_saturation=0,_gain=0,_whitebal=0,_freq=24000000,_dual_buff=False):
         try:
