@@ -1,103 +1,88 @@
+#!/usr/bin/env python3
+"""Generate a SPIFFS image using a project's firmware configuration."""
 
-from __future__ import print_function
 import argparse
-import os
+from pathlib import Path
 import re
-
-in_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fs")
-out_dir = "/home/labplus/maixpy/tools/spiffs/fs_image"
-out_name = "maixpy_spiffs.img"
-
-parser = argparse.ArgumentParser(description='generate spiffs image', prog="gen_spiffs_image.py")
-parser.add_argument("config_file", help = "project config file path, MUST the same with firmware's", default="")
-
-args = parser.parse_args()
-
-project_fs = os.path.join(os.path.dirname(os.path.abspath(args.config_file)), "spiffs", "fs")
-if os.path.isdir(project_fs):
-    in_dir = project_fs
-
-if args.config_file == "" or not os.path.exists(args.config_file):
-    print("file {} not found".format(args.config_file))
-    exit(1)
-
-if not os.path.exists(in_dir):
-    print("file system dir not found:"+in_dir)
-    print("please put files in "+in_dir+" folder")
-    os.mkdir(in_dir)
-    exit(1)
-
-if len(os.listdir(in_dir)) == 0:
-    print("[WARNING] No file in fs dir, so the image will be empty")
- 
-# check submodule
-if len(os.listdir("/home/labplus/maixpy/tools/spiffs/mkspiffs")) == 0:
-    ret = os.system("git submodule update --init mkspiffs")
-    if ret != 0:
-        print("[ERROR] update submodule mkspiffs fail")
-        exit(1)
-
-if len(os.listdir("/home/labplus/maixpy/tools/spiffs/mkspiffs/spiffs")) == 0:
-    os.chdir("mkspiffs")
-    ret = os.system("git submodule update --init spiffs")
-    if ret != 0:
-        print("[ERROR] update submodule mkspiffs/spiffs fail")
-        exit(1)
-    os.chdir("..")
-
-f = open(args.config_file)
-content = f.read()
-f.close()
-
-match = re.findall(r"{}(.*){}(.*)\n".format("CONFIG_SPIFFS_", "="), content)
-config = {}
-for item in match:
-    v = item[1]
-    if v == "y":
-        v = "1"
-    config["SPIFFS_"+item[0]] = v
+import shutil
+import subprocess
+import tempfile
 
 
-flags =  ""
-for key in config.keys():
-    flags += ' -D'+key+'='+config[key]
-
-flags += ' -DSPIFFS_READ_ONLY=0 -DSPIFFS_ALIGNED_OBJECT_INDEX_TABLES=1 -DSPIFFS_SINGLETON=0 -DSPIFFS_HAL_CALLBACK_EXTRA=0'
-
-gen_exe_cmd = 'cd mkspiffs && make clean && make dist CPPFLAGS="'+flags+'" BUILD_CONFIG_NAME=-maixpy'
-print("--------------------")
-print(gen_exe_cmd)
-print("--------------------")
-ret = os.system(gen_exe_cmd)
-if ret != 0:
-    exit(1)
+TOOLS_DIR = Path(__file__).resolve().parent
+MKSPIFFS_DIR = TOOLS_DIR / "mkspiffs"
 
 
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("config_file", type=Path, help="Configuration used to build the firmware")
+    args = parser.parse_args()
+    config_file = args.config_file.resolve()
+    if not config_file.is_file():
+        parser.error("configuration file not found: {}".format(config_file))
 
-if not os.path.exists(out_dir):
-    os.mkdir(out_dir)
+    project = next((parent for parent in config_file.parents
+                    if (parent / "CMakeLists.txt").is_file()
+                    and (parent / "main").is_dir()), None)
+    if project is None:
+        parser.error("could not find a project directory above {}".format(config_file))
 
-dirs = os.listdir("mkspiffs")
-exe_path = None
-for dir in dirs:
-    if os.path.isfile(os.path.join("mkspiffs", dir)):
-        continue
-    match = re.findall(r"{}(.*){}(.*)".format("mkspiffs", "maixpy"), dir)
-    if len(match) > 0:
-        exe_path = os.path.abspath("mkspiffs/"+dir+"/mkspiffs")
-        break
-print(exe_path)
-logical_block_size = int(config["SPIFFS_LOGICAL_BLOCK_SIZE"], 16)
-logical_page_size  = int(config["SPIFFS_LOGICAL_PAGE_SIZE"], 16)
-image_size = int(config["SPIFFS_SIZE"], 16)
-flash_addr = int(config["SPIFFS_START_ADDR"], 16)
-gen_image_cmd = "{} -c {} -b {} -p {} -s {} {}/{}".format(exe_path, in_dir, logical_block_size, logical_page_size, image_size, out_dir, out_name)
-print("--------------------")
-print(gen_image_cmd)
-print("--------------------")
-ret = os.system(gen_image_cmd)
-if ret != 0:
-    exit(1)
-print("[SUCCESS] image file in "+out_dir)
-print("[USAGE] Please flash {}/{} to address 0x{:X} of flash with flash tool kflash_gui".format(out_dir, out_name, flash_addr))
+    project_fs = project / "spiffs" / "fs"
+    in_dir = project_fs if project_fs.is_dir() else TOOLS_DIR / "fs"
+    if not in_dir.is_dir():
+        parser.error("SPIFFS source directory not found: {}".format(in_dir))
 
+    config = dict(re.findall(r"^CONFIG_SPIFFS_(\w+)=(\S+)",
+                             config_file.read_text(encoding="utf-8"), re.MULTILINE))
+    required = ("SIZE", "START_ADDR", "LOGICAL_BLOCK_SIZE", "LOGICAL_PAGE_SIZE")
+    missing = [key for key in required if key not in config]
+    if missing:
+        parser.error("missing SPIFFS configuration: {}".format(", ".join(missing)))
+
+    board_prefix = "config_board_labplus_"
+    if config_file.name.startswith(board_prefix) and config_file.suffix == ".mk":
+        board = config_file.stem[len(board_prefix):]
+        if board == "owl_2024_box":
+            board = "owl_box"
+        out_dir = project / "build" / board
+    elif config_file.name == "global_config.mk" and config_file.parent.name == "config":
+        out_dir = config_file.parent.parent
+    else:
+        out_dir = project / "build"
+    image = out_dir / "maixpy_spiffs.img"
+
+    if not (MKSPIFFS_DIR / "spiffs" / "src" / "spiffs.h").is_file():
+        parser.error("mkspiffs source or SPIFFS submodule is missing: {}".format(MKSPIFFS_DIR))
+
+    flags = ["-DSPIFFS_{}={}".format(key, "1" if value == "y" else value)
+             for key, value in config.items() if value != "n"]
+    flags.extend(["-DSPIFFS_READ_ONLY=0", "-DSPIFFS_ALIGNED_OBJECT_INDEX_TABLES=1",
+                  "-DSPIFFS_SINGLETON=0", "-DSPIFFS_HAL_CALLBACK_EXTRA=0"])
+    try:
+        with tempfile.TemporaryDirectory(prefix="labplus-mkspiffs-") as temp:
+            build = Path(temp) / "mkspiffs"
+            build.mkdir()
+            for directory in ("include", "tclap"):
+                shutil.copytree(MKSPIFFS_DIR / directory, build / directory)
+            (build / "spiffs").mkdir()
+            shutil.copytree(MKSPIFFS_DIR / "spiffs" / "src", build / "spiffs" / "src",
+                            ignore=shutil.ignore_patterns("*.o"))
+            for name in ("Makefile", "main.cpp"):
+                shutil.copy2(MKSPIFFS_DIR / name, build / name)
+            subprocess.run(["make", "VERSION=local", "SPIFFS_VERSION=local",
+                            "BUILD_CONFIG_NAME=-maixpy", "CPPFLAGS=" + " ".join(flags)],
+                           cwd=str(build), check=True)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            subprocess.run([str(build / "mkspiffs"), "-c", str(in_dir),
+                            "-b", str(int(config["LOGICAL_BLOCK_SIZE"], 0)),
+                            "-p", str(int(config["LOGICAL_PAGE_SIZE"], 0)),
+                            "-s", str(int(config["SIZE"], 0)), str(image)], check=True)
+    except (OSError, subprocess.CalledProcessError) as error:
+        parser.exit(1, "error: {}\n".format(error))
+
+    print("[SUCCESS] image: {}".format(image))
+    print("[USAGE] flash at 0x{:X}".format(int(config["START_ADDR"], 0)))
+
+
+if __name__ == "__main__":
+    main()

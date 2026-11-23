@@ -5,19 +5,23 @@ spiffs tools
 
 Only support Linux
 
-* Open terminal here
+* Put project files in `<project>/spiffs/fs`. Projects without that directory use `tools/spiffs/fs`.
 
-* Create `fs` dir, and put files in this forlder
-
-* Genrate by execute script `gen_spiffs_image.py`
+* Generate the image with the firmware configuration:
 
 ```
 python gen_spiffs_image.py ../../projects/maixpy_k210/config_defaults.mk
 ```
 
-the config file from project folder, you can use `config_defaults.mk` if you compiled maixpy with default config, or you must use `build/config/global_config.mk`
+Use the same configuration as the firmware build. Labplus board configurations place the image under `projects/labplus/build/<board>/maixpy_spiffs.img`. A generated `build/<board>/config/global_config.mk` also writes to that board's build directory. Other project configurations write to `<project>/build/maixpy_spiffs.img`.
 
-* Then the image file(`maixpy_spiffs.img`) will be in `fs_image` folder
+For example, run the following from the repository root to generate the Labplus 3.1 camera image:
+
+```sh
+python3 tools/spiffs/gen_spiffs_image.py projects/labplus/config_board_labplus_owl_2024.mk
+```
+
+Linux requires `make`, GCC, G++, and the initialized `tools/spiffs/mkspiffs` and nested SPIFFS submodules. The tool builds `mkspiffs` in a temporary directory.
 
 * Burn it to flash at correct address with [kflash_gui](https://github.com/sipeed/kflash_gui) or `kflash.py`, this adress is assigned in the config file(`config_defaults.mk` or `build/config/global_config.mk`)( variable `CONFIG_SPIFFS_START_ADDR`)
 

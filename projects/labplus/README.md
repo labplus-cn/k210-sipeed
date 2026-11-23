@@ -77,7 +77,11 @@ py -3 .\pack_firmware.py -b owl_2024
 python3 pack_firmware.py -b owl_2024
 ```
 
-脚本按板型配置将 [`spiffs/fs`](spiffs/fs/) 中的文件生成 SPIFFS 镜像，和主程序、模型一起写入 KFlash 烧录包。
+脚本按板型配置将 [`spiffs/fs`](spiffs/fs/) 中的文件生成 SPIFFS 镜像，和主程序、模型一起写入 KFlash 烧录包。单独生成 SPIFFS 镜像可在 Linux 或 WSL 中运行以下命令，输出位于 `build/owl_2024/maixpy_spiffs.img`。
+
+```sh
+python3 ../../tools/spiffs/gen_spiffs_image.py config_board_labplus_owl_2024.mk
+```
 
 | Flash 地址 | 输入 |
 | --- | --- |
@@ -111,7 +115,7 @@ py -3 .\pack_firmware.py -b owl_gansu --models .\k210_model\owl_gansu\0x300000-c
 ## 当前发布限制
 
 - 旧版 `make.py mkfs` 和 `make.py pack` 的清单映射只有 1956、Owl、Classroom Kit。Owl Gansu、Box、2024 和 Dog 缺少对应映射，调用这两个子命令会触发 `KeyError`。
-- `mkfs` 传入 `pack -d … -o …`，当前 [SPIFFS 镜像工具](../../tools/spiffs/gen_spiffs_image.py) 只接受板型配置文件路径，且脚本内含固定的 Linux 路径。 `pack` 引用的 `tools/kfpkg/make_kfpkg.py` 在当前仓库中缺失。
+- 旧版 `mkfs` 传入 `pack -d … -o …`，当前 [SPIFFS 镜像工具](../../tools/spiffs/gen_spiffs_image.py) 接受板型配置文件路径。旧版 `pack` 引用的 `tools/kfpkg/make_kfpkg.py` 在当前仓库中缺失。
 - 标准 Owl 的 [烧录清单](release/labplus_owl_manifest.json) 与固件读取地址有差异。下表记录当前源码中的两个值，制作可用烧录包前需核对对应板型的完整 Flash 布局。
 
 | 资源 | 标准 Owl 清单地址 | 标准 Owl 固件地址 |
