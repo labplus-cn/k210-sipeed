@@ -2,6 +2,7 @@
 """Build a KFlash package for an Owl-family firmware release."""
 
 import argparse
+from datetime import date
 import json
 import os
 from pathlib import Path
@@ -138,7 +139,7 @@ def main():
             parser.error("--models is required for this board")
         args.models = PROJECT / "k210_model" / "labplus_owl_2024_models_0x300000.bin"
     if args.output is None:
-        args.output = board_build / f"labplus_{BOARDS[args.board]}.kfpkg"
+        args.output = board_build / f"labplus_{BOARDS[args.board]}_package-{date.today():%Y-%m-%d}.kfpkg"
     try:
         pack(args)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:

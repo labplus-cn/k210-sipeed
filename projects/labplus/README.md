@@ -65,7 +65,7 @@ python3 make.py -b owl_gansu build
 
 ## 一条命令打包三分区固件
 
-编译得到 `build/owl_2024/labplus.bin` 后，在 `projects/labplus` 目录运行以下 PowerShell 命令，为 3.1 摄像头生成 `build/owl_2024/labplus_owl_2024.kfpkg`。
+编译得到 `build/owl_2024/labplus.bin` 后，在 `projects/labplus` 目录运行以下 PowerShell 命令，为 3.1 摄像头生成 `build/owl_2024/labplus_owl_2024_package-YYYY-MM-DD.kfpkg`。日期使用打包当天的本地日期，同一天重复打包会覆盖同名文件。
 
 ```powershell
 py -3 .\pack_firmware.py -b owl_2024
