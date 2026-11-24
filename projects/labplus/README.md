@@ -29,6 +29,51 @@
 
 按[仓库构建文档](../../build.md)初始化 Git 子模块，安装 Python 3、CMake、GNU Make 和 Kendryte RISC-V 交叉工具链。板型配置默认使用 `/opt/kendryte-toolchain/bin` 下的 `riscv64-unknown-elf-` 工具链，路径以实际安装位置为准。
 
+### 迁移前检查编译环境
+
+在实际编译固件的 Linux 机器上，可运行采集脚本，将环境信息保存到带时间戳的 `build/build-environment-*.txt`。
+
+```sh
+cd projects/labplus
+sh collect_build_environment.sh
+```
+
+也可以通过第一个参数指定报告路径，例如 `sh collect_build_environment.sh /tmp/k210-build-environment.txt`。报告包含项目路径、工具版本、Python 包、Git 工作区和子模块状态。报告不会覆盖已有文件。
+
+在实际编译固件的 Linux 终端中进入仓库根目录，记录系统、工具链、Python 依赖和源码状态。
+
+```sh
+cat /etc/os-release
+uname -m
+python3 --version
+cmake --version
+make --version
+gcc --version
+g++ --version
+command -v riscv64-unknown-elf-gcc
+riscv64-unknown-elf-gcc --version
+python3 -m pip freeze
+git rev-parse HEAD
+git status --short
+git submodule status --recursive
+```
+
+如果交叉编译器未加入 `PATH`，检查板型配置中指定的默认位置。
+
+```sh
+ls -l /opt/kendryte-toolchain/bin/riscv64-unknown-elf-gcc
+/opt/kendryte-toolchain/bin/riscv64-unknown-elf-gcc --version
+```
+
+在目标 Mac 的终端检查系统版本和 CPU 架构。
+
+```sh
+uname -m
+sw_vers
+```
+
+这些信息用于确认编译器可执行文件的架构和需要迁移的子模块。工具链目录可能在板型配置或本地 `.config.mk` 中被覆盖。
+
 ### 按板型编译
 
 从仓库根目录进入 Labplus 工程。

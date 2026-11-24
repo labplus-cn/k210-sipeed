@@ -26,6 +26,7 @@ class Guidepost(object):
         except Exception as e:
             print(e)
             print('==Guidepost Error==')
+            return None, None
         plist=fmap[:]
         pmax=max(plist)
         max_index=plist.index(pmax)
