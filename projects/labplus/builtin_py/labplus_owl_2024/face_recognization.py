@@ -11,40 +11,48 @@ import _thread
 
 class Face_recognization(object):
     def __init__(self, sensor=None, kpu=None, lcd=None, task_fd=0x300000, task_ld=0x380000, task_fe=0x3d0000, face_num=1, accuracy=80):
-        self.kpu = kpu
-        self.lcd = lcd
-        self.sensor = sensor
-        self.task_fd = self.kpu.load(task_fd)
-        self.task_ld = self.kpu.load(task_ld)
-        self.task_fe = self.kpu.load(task_fe)
-        self.face_num = face_num
-        self.clock = time.clock()
-        self.anchor = (1.889, 2.5245, 2.9465, 3.94056, 3.99987, 5.3658, 5.155437,
-                6.92275, 6.718375, 9.01025)  # anchor for face detect
-        self.dst_point = [(44, 59), (84, 59), (64, 82), (47, 105),
-                    (81, 105)]  # standard face key point position        
-        self.accuracy = accuracy
-        self.feature_file_exits = 0
+        try:
+            self.kpu = kpu
+            self.lcd = lcd
+            self.sensor = sensor
+            self.task_fd = self.kpu.load(task_fd)
+            self.task_ld = self.kpu.load(task_ld)
+            self.task_fe = self.kpu.load(task_fe)
+            self.face_num = face_num
+            self.clock = time.clock()
+            self.anchor = (1.889, 2.5245, 2.9465, 3.94056, 3.99987, 5.3658, 5.155437,
+                    6.92275, 6.718375, 9.01025)  # anchor for face detect
+            self.dst_point = [(44, 59), (84, 59), (64, 82), (47, 105),
+                        (81, 105)]  # standard face key point position
+            self.accuracy = accuracy
+            self.feature_file_exits = 0
 
-        self.names = ['ID:0', 'ID:1', 'ID:2', 'ID:3', 'ID:4',
-                'ID:5', 'ID:6', 'ID:7', 'ID:8', 'ID:9']
+            self.names = ['ID:0', 'ID:1', 'ID:2', 'ID:3', 'ID:4',
+                    'ID:5', 'ID:6', 'ID:7', 'ID:8', 'ID:9']
 
-        fm.register(12, fm.fpioa.GPIOHS0, force=True)
+            fm.register(12, fm.fpioa.GPIOHS0, force=True)
 
-        self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
+            self.key = GPIO(GPIO.GPIOHS0, GPIO.PULL_UP)
 
-        a = self.kpu.init_yolo2(self.task_fd, 0.5, 0.3, 5, self.anchor)
-        self.img_face = image.Image(size=(128, 128))
-        a = self.img_face.pix_to_ai()
-        self.record_ftr = []
-        self.record_ftrs = []
-        self.change_camera()
-        self.init_data()
-        self.load_data()
-        time.sleep(3)
+            a = self.kpu.init_yolo2(self.task_fd, 0.5, 0.3, 5, self.anchor)
+            self.img_face = image.Image(size=(128, 128))
+            a = self.img_face.pix_to_ai()
+            self.record_ftr = []
+            self.record_ftrs = []
+            self.change_camera()
+            self.init_data()
+            self.load_data()
+            time.sleep(3)
 
-        self.flag_add = 0
-        self.tmp_num = 0
+            self.flag_add = 0
+            self.tmp_num = 0
+        except Exception:
+            try:
+                self.__del__()
+            except Exception as release_error:
+                print("[model init release]", release_error)
+                raise RuntimeError("KPU_RELEASE_FAILED")
+            raise
 
     def add_face1(self):
         self.clear_data()
@@ -254,8 +262,8 @@ class Face_recognization(object):
             # self.sensor.set_brightness(0)
             # self.sensor.set_hmirror(1)
         except Exception as e:
-            self.lcd.clear((0, 0, 255))
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
+            print("[camera init]", e)
+            raise
         
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)
@@ -304,9 +312,18 @@ class Face_recognization(object):
         time.sleep_ms(5)
 
     def __del__(self):
-        a = self.kpu.deinit(self.task_fe)
-        a = self.kpu.deinit(self.task_ld)
-        a = self.kpu.deinit(self.task_fd)
+        failed = False
+        for name in ("task_fe", "task_ld", "task_fd"):
+            task = getattr(self, name, None)
+            if task is not None:
+                setattr(self, name, None)
+                try:
+                    self.kpu.deinit(task)
+                except Exception as e:
+                    print("[face release]", name, e)
+                    failed = True
+        if failed:
+            raise RuntimeError("face model release failed")
 
             
 

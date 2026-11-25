@@ -3,17 +3,25 @@ import gc
 
 class YOLO_DETECT(object):
     def __init__(self,sensor,kpu,lcd):
-        self.lcd =lcd
-        self.sensor = sensor
-        self.kpu = kpu
+        try:
+            self.lcd =lcd
+            self.sensor = sensor
+            self.kpu = kpu
 
-        self.clock = time.clock()
-        self.classes = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
-        self.task = self.kpu.load(0x450000)
-        self.anchor = (1.08, 1.19, 3.42, 4.41, 6.63, 11.38, 9.42, 5.11, 16.62, 10.52)
-        a = self.kpu.init_yolo2(self.task, 0.5, 0.3, 5, self.anchor)
-        self.change_camera()
-        time.sleep(0.5)
+            self.clock = time.clock()
+            self.classes = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
+            self.task = self.kpu.load(0x450000)
+            self.anchor = (1.08, 1.19, 3.42, 4.41, 6.63, 11.38, 9.42, 5.11, 16.62, 10.52)
+            a = self.kpu.init_yolo2(self.task, 0.5, 0.3, 5, self.anchor)
+            self.change_camera()
+            time.sleep(0.5)
+        except Exception:
+            try:
+                self.__del__()
+            except Exception as release_error:
+                print("[model init release]", release_error)
+                raise RuntimeError("KPU_RELEASE_FAILED")
+            raise
         # self.kpu.memtest()
     
     def recognize(self):
@@ -33,9 +41,10 @@ class YOLO_DETECT(object):
             return None,None,None
 
     def __del__(self):
-        a = self.kpu.deinit(self.task)
-        del self.task
-        gc.collect()
+        task = getattr(self, "task", None)
+        if task is not None:
+            self.task = None
+            self.kpu.deinit(task)
 
     def change_camera(self):
         try:
@@ -45,8 +54,8 @@ class YOLO_DETECT(object):
             self.sensor.set_windowing((320,240))
             # self.sensor.set_hmirror(1)
         except Exception as e:
-            self.lcd.clear((0, 0, 255))
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
+            print("[camera init]", e)
+            raise
         
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)

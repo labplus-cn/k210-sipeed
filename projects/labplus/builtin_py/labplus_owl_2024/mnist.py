@@ -3,22 +3,29 @@ import os, Maix, gc, time
 
 class MNIST(object):
     def __init__(self, sensor, lcd, kpu):
-        self.kpu = kpu
-        self.lcd = lcd
-        self.sensor = sensor
-        # self.choice = choice
-
         try:
-            self.lcd.init(freq=15000000, invert=1)
-            self.lcd.rotation(1)
-            self.lcd.clear(0,0,0)
-            self.task_mnist = self.kpu.load(0x610000)
-            self.change_camera()
-            time.sleep(1)
-        except Exception as e:
-            self.lcd.draw_string(0,20, "e: " + str(e)[-30:-20], lcd.WHITE, lcd.BLUE) 
-            self.lcd.draw_string(0,40, "e: " + str(e)[-20:], lcd.WHITE, lcd.BLUE) 
-            time.sleep(3)
+            self.kpu = kpu
+            self.lcd = lcd
+            self.sensor = sensor
+            # self.choice = choice
+
+            try:
+                self.lcd.init(freq=15000000, invert=1)
+                self.lcd.rotation(1)
+                self.lcd.clear(0,0,0)
+                self.task_mnist = self.kpu.load(0x610000)
+                self.change_camera()
+                time.sleep(1)
+            except Exception as e:
+                print("[MNIST init]", e)
+                raise
+        except Exception:
+            try:
+                self.__del__()
+            except Exception as release_error:
+                print("[model init release]", release_error)
+                raise RuntimeError("KPU_RELEASE_FAILED")
+            raise
 
     def recognize(self):
         img_mnist = self.sensor.snapshot()
@@ -48,7 +55,10 @@ class MNIST(object):
         # return max_index_mnist,pmax_mnist
 
     def __del__(self):
-        self.kpu.deinit(self.task_mnist)
+        task = getattr(self, "task_mnist", None)
+        if task is not None:
+            self.task_mnist = None
+            self.kpu.deinit(task)
 
     def change_camera(self):
         try:
@@ -58,8 +68,8 @@ class MNIST(object):
             self.sensor.set_windowing((240, 240))  
             # self.sensor.set_hmirror(1)
         except Exception as e:
-            self.lcd.clear((0, 0, 255))
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
+            print("[camera init]", e)
+            raise
         
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)

@@ -3,27 +3,31 @@ import time
 
 class KPU_KMODEL(object):
     def __init__(self,sensor=None,kpu=None,lcd=None,model=0xc50000,width=128,height=128):
-        from Maix import utils
-        utils.gc_heap_size(0x55000)
-        self.lcd =lcd
-        self.sensor = sensor
-        self.kpu = kpu
-        self.kpu.memtest()
         try:
-            self.task = self.kpu.load(model)
-        except Exception as e:
-            print(e)
-            e=str(e)
-            self.lcd.draw_string(0,200, e, lcd.WHITE, lcd.BLUE)
-            if(len(e)>22):
-                self.lcd.draw_string(0,220, e[23:-1], lcd.WHITE, lcd.BLUE)
-            time.sleep(8)
-        self.lcd.clear()
-        # self.labels = ["stop","none","left","right"]
-        self.width = width
-        self.height = height
+            from Maix import utils
+            utils.gc_heap_size(0x55000)
+            self.lcd =lcd
+            self.sensor = sensor
+            self.kpu = kpu
+            self.kpu.memtest()
+            try:
+                self.task = self.kpu.load(model)
+            except Exception as e:
+                print("[KPU model init]", e)
+                raise
+            self.lcd.clear()
+            # self.labels = ["stop","none","left","right"]
+            self.width = width
+            self.height = height
 
-        self.change_camera()
+            self.change_camera()
+        except Exception:
+            try:
+                self.__del__()
+            except Exception as release_error:
+                print("[model init release]", release_error)
+                raise RuntimeError("KPU_RELEASE_FAILED")
+            raise
     
     def recognize(self):
         # self.kpu.memtest()
@@ -42,7 +46,10 @@ class KPU_KMODEL(object):
             return None,None
 
     def __del__(self):
-        a = self.kpu.deinit(self.task)
+        task = getattr(self, "task", None)
+        if task is not None:
+            self.task = None
+            self.kpu.deinit(task)
 
     def change_camera(self):
         try:
@@ -52,8 +59,8 @@ class KPU_KMODEL(object):
             # self.sensor.set_hmirror(1)
             self.sensor.set_windowing((self.width, self.height))
         except Exception as e:
-            self.lcd.clear((0, 0, 255))
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
+            print("[camera init]", e)
+            raise
         
         self.sensor.skip_frames(30)
         self.sensor.run(1)
@@ -63,19 +70,27 @@ class KPU_KMODEL(object):
 
 class KPU_YOLO_KMODEL(object):
     def __init__(self,  sensor=None,kpu=None,lcd=None, model="/sd/m.kmodel", width=128, height=128, anchors=[]):
-        from Maix import utils
-        utils.gc_heap_size(0x60000)
-        self.lcd =lcd
-        self.sensor = sensor
-        self.kpu = kpu
-        self.task = self.kpu.load(model)
-        self.lcd.clear()
-        self.model = model
-        self.width = width
-        self.height = height
-        self.anchors = anchors
-        self.change_camera()
-        self.kpu.init_yolo2(self.task, 0.5, 0.3, 5, self.anchors)
+        try:
+            from Maix import utils
+            utils.gc_heap_size(0x60000)
+            self.lcd =lcd
+            self.sensor = sensor
+            self.kpu = kpu
+            self.task = self.kpu.load(model)
+            self.lcd.clear()
+            self.model = model
+            self.width = width
+            self.height = height
+            self.anchors = anchors
+            self.change_camera()
+            self.kpu.init_yolo2(self.task, 0.5, 0.3, 5, self.anchors)
+        except Exception:
+            try:
+                self.__del__()
+            except Exception as release_error:
+                print("[model init release]", release_error)
+                raise RuntimeError("KPU_RELEASE_FAILED")
+            raise
 
     def recognize(self):
         try:
@@ -97,7 +112,10 @@ class KPU_YOLO_KMODEL(object):
             # raise e
 
     def __del__(self):
-        a = self.kpu.deinit(self.task)
+        task = getattr(self, "task", None)
+        if task is not None:
+            self.task = None
+            self.kpu.deinit(task)
 
     def change_camera(self):
         try:
@@ -107,8 +125,8 @@ class KPU_YOLO_KMODEL(object):
             # self.sensor.set_hmirror(1)
             self.sensor.set_windowing((self.width, self.height))
         except Exception as e:
-            self.lcd.clear((0, 0, 255))
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
+            print("[camera init]", e)
+            raise
         
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)

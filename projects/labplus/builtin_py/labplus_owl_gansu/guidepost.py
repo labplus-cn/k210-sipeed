@@ -4,17 +4,25 @@ import gc
 
 class Guidepost(object):
     def __init__(self,sensor=None,kpu=None,lcd=None):
-        gc.collect()
-        self.lcd =lcd
-        self.sensor = sensor
-        self.kpu = kpu
-        self.task = self.kpu.load(0xc50000)
-        # self.task = self.kpu.load('/sd/qingjiao3.kmodel')
-        self.img = None
-        # self.fmap = None
-        self.lcd.clear()
-        self.labels = ["stop","none","left","right"]
-        self.change_camera()
+        try:
+            gc.collect()
+            self.lcd =lcd
+            self.sensor = sensor
+            self.kpu = kpu
+            self.task = self.kpu.load(0xc50000)
+            # self.task = self.kpu.load('/sd/qingjiao3.kmodel')
+            self.img = None
+            # self.fmap = None
+            self.lcd.clear()
+            self.labels = ["stop","none","left","right"]
+            self.change_camera()
+        except Exception:
+            try:
+                self.__del__()
+            except Exception as release_error:
+                print("[model init release]", release_error)
+                raise RuntimeError("KPU_RELEASE_FAILED")
+            raise
     
     def recognize(self):
         self.kpu.memtest()
@@ -41,12 +49,10 @@ class Guidepost(object):
             return None,None
 
     def __del__(self):
-        a = self.kpu.deinit(self.task)
-        print('kpu.deinit:{}'.format(a))
-        del self.task
-        # del self.fmap
-   
-        gc.collect()
+        task = getattr(self, "task", None)
+        if task is not None:
+            self.task = None
+            self.kpu.deinit(task)
 
     def change_camera(self):
         try:
@@ -56,8 +62,8 @@ class Guidepost(object):
             self.sensor.set_framesize(self.sensor.QVGA)
             self.sensor.set_windowing((192, 192))
         except Exception as e:
-            self.lcd.clear((0, 0, 255))
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
+            print("[camera init]", e)
+            raise
         
         # if(choice==1 and self.sensor.get_id()==0x2642):
         #     self.sensor.set_vflip(1)

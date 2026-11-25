@@ -293,12 +293,67 @@ class AICamera(object):
                 # A missing byte may have exposed the next header inside this span.
                 start = self._uart_find_header(start + 1)
                 continue
+            if frame_type == 0x02 and ((self.CheckCode(buf[start:end - 1]) - buf[start + 8]) & 0xff) != buf[end - 1]:
+                start = self._uart_find_header(start + 1)
+                continue
             try:
-                self.process_cmd(buf[start:end])
+                self._process_uart_frame(buf[start:end])
             except Exception as e:
                 print("[uart_handle]", e)
             start = self._uart_find_header(end)
         self._uart_rx = buf[start:]
+
+    def _process_uart_frame(self, cmd):
+        if cmd[2] == 0x01 and cmd[3] == 0x01 and cmd[4] == 0xFC:
+            mode, nonce = cmd[5], cmd[6]
+            status = getattr(self, "_last_init_status", 0) if getattr(self, "_last_init_mode", None) == mode else 0
+            self.AI_Uart_CMD(0x01, 0x01, 0xFD, [mode, status, nonce])
+            return
+        if cmd[2] == 0x01 and cmd[3] == 0x01 and cmd[4] == 0xFE:
+            self._last_init_mode = None
+            self._last_init_status = 0
+        # Only commands that actually initialize a mode are acknowledged.
+        mode = None
+        if cmd[2] == 0x01:
+            if cmd[3] == 0x01 and cmd[4] == 0xFA and cmd[5] == 0x01:
+                mode = DEFAULT_MODE
+            elif cmd[3] == 0x01 and cmd[4] == FACTORY_MODE and cmd[5] == 0x01:
+                mode = FACTORY_MODE
+            elif cmd[4] == 0x01 and cmd[3] in (MNIST_MODE, OBJECT_RECOGNIZATION_MODE, FACE_DETECTION_MODE,
+                    FACE_RECOGNIZATION_MODE, SELF_LEARNING_CLASSIFIER_MODE, COLOE_MODE, QRCODE_MODE,
+                    GUIDEPOST_MODE, TRACK_MODE, COLOR_STATISTICS_MODE, COLOR_EXTRACTO_MODE, APRILTAG_MODE):
+                mode = cmd[3]
+        elif cmd[2] == 0x02 and cmd[4] == 0x02 and cmd[3] in (KPU_MODEL_MODE, KPU_YOLO_MODEL_MODE):
+            mode = cmd[3]
+        if mode is None:
+            return self.process_cmd(cmd)
+
+        try:
+            # Direct initialization and repeated initialization must obey the same
+            # cleanup rules as an explicit FE switch, before the new model loads.
+            self._release_mode_objects()
+            gc.collect()
+            self.k210 = self.K210()
+            self.process_cmd(cmd)
+            name = self._MODE_OBJECTS.get(mode)
+            if name is not None and getattr(self, name, None) is None:
+                raise RuntimeError("mode object missing")
+            self._last_init_mode = mode
+            self._last_init_status = 1
+            self.AI_Uart_CMD(0x01, 0x01, 0xFD, [mode, 1])
+        except Exception as e:
+            print("[mode init]", mode, e)
+            if str(e) == "KPU_RELEASE_FAILED":
+                self._mode_release_failed = True
+            try:
+                self._release_mode_objects()
+            except Exception as release_error:
+                print("[mode init cleanup]", release_error)
+            gc.collect()
+            self.k210 = self.K210()
+            self._last_init_mode = mode
+            self._last_init_status = 0
+            self.AI_Uart_CMD(0x01, 0x01, 0xFD, [mode, 0])
 
     def process_cmd(self,cmd):
         CMD = cmd
@@ -807,6 +862,9 @@ class AICamera(object):
 
     def _release_mode_objects(self):
         # Include stale references left by an incomplete mode transition.
+        if getattr(self, "_mode_release_failed", False):
+            raise RuntimeError("mode resource release failed; reset required")
+        failed = False
         for name in self._MODE_OBJECTS.values():
             obj = getattr(self, name, None)
             if obj is None:
@@ -818,16 +876,17 @@ class AICamera(object):
                     release()
             except Exception as e:
                 print("[switcherMode] release", name, e)
+                if name in ("mnist", "yolo_detect", "face_detect", "fac", "slc",
+                            "guidepost", "kpu_model", "kpu_yolo_model"):
+                    failed = True
+        if failed:
+            self._mode_release_failed = True
+            raise RuntimeError("mode resource release failed")
 
     def switcherMode(self, mode):
         current_mode = self.k210.mode
         if self.k210.sw_lock:
             return False
-        if current_mode != DEFAULT_MODE and mode == current_mode:
-            name = self._MODE_OBJECTS.get(current_mode)
-            if name is None or getattr(self, name, None) is not None:
-                return False
-
         self.k210.sw_lock = True
         try:
             self._release_mode_objects()
@@ -858,9 +917,8 @@ class AICamera(object):
             self.sensor.set_framesize(_framesize)
             self.sensor.set_pixformat(_pixformat)
         except Exception as e:
-            self.lcd.clear((0, 0, 255))
-            self.lcd.draw_string(self.lcd.width()//2-100,self.lcd.height()//2-4, "Camera: " + str(e), self.lcd.WHITE, self.lcd.BLUE) 
-            time.sleep(3)
+            print("[camera init]", e)
+            raise
         
         self.sensor.set_vflip(_vflip) 
         self.sensor.set_hmirror(_hmirror) #水平镜像
