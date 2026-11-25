@@ -307,11 +307,20 @@ class AICamera(object):
         if cmd[2] == 0x01 and cmd[3] == 0x01 and cmd[4] == 0xFC:
             mode, nonce = cmd[5], cmd[6]
             status = getattr(self, "_last_init_status", 0) if getattr(self, "_last_init_mode", None) == mode else 0
+            if status != 1:
+                message = getattr(self, "_last_init_error", None) or "mode initialization failed"
+                self._send_uart_error(mode, nonce, message)
             self.AI_Uart_CMD(0x01, 0x01, 0xFD, [mode, status, nonce])
             return
         if cmd[2] == 0x01 and cmd[3] == 0x01 and cmd[4] == 0xFE:
             self._last_init_mode = None
             self._last_init_status = 0
+            self._last_init_error = None
+            try:
+                return self.process_cmd(cmd)
+            except Exception as e:
+                self._send_uart_error(cmd[5], 0, e)
+                raise
         # Only commands that actually initialize a mode are acknowledged.
         mode = None
         if cmd[2] == 0x01:
@@ -340,6 +349,7 @@ class AICamera(object):
                 raise RuntimeError("mode object missing")
             self._last_init_mode = mode
             self._last_init_status = 1
+            self._last_init_error = None
             self.AI_Uart_CMD(0x01, 0x01, 0xFD, [mode, 1])
         except Exception as e:
             print("[mode init]", mode, e)
@@ -353,7 +363,17 @@ class AICamera(object):
             self.k210 = self.K210()
             self._last_init_mode = mode
             self._last_init_status = 0
+            self._last_init_error = str(e)
             self.AI_Uart_CMD(0x01, 0x01, 0xFD, [mode, 0])
+
+    def _send_uart_error(self, mode, nonce, message):
+        try:
+            text = str(message)
+            encoded = text.encode("utf-8")[:180]
+            text = encoded.decode("utf-8", "ignore")
+            self.AI_Uart_CMD_String(0x01, 0xFB, [mode, nonce], str_buf=text)
+        except Exception as e:
+            print("[UART error report]", e)
 
     def process_cmd(self,cmd):
         CMD = cmd
@@ -628,6 +648,7 @@ class AICamera(object):
             except Exception as e:
                 print(str(e))
                 print("==uart_handle==")
+                self._send_uart_error(getattr(self.k210, "mode", DEFAULT_MODE), 0, e)
 
             try:
                 if(self.k210.mode==DEFAULT_MODE):
@@ -833,6 +854,7 @@ class AICamera(object):
                 s=str(e)
                 print(s)
                 print("==222==")
+                self._send_uart_error(getattr(self.k210, "mode", DEFAULT_MODE), 0, e)
                 lcd.draw_string(0,180, s, lcd.WHITE, lcd.BLUE)
                 if(len(s)>30):
                     lcd.draw_string(0,220, s[31:-1], lcd.WHITE, lcd.BLUE)
