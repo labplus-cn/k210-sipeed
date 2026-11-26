@@ -46,7 +46,8 @@ class Endpoint:
 
 def host_driver():
     clock = SimpleNamespace(sleep=lambda _: None, sleep_ms=lambda _: None)
-    env = {"gc": gc, "time": clock, "Pin": SimpleNamespace(P15=15, P16=16)}
+    env = {"gc": gc, "time": clock, "Pin": SimpleNamespace(P15=15, P16=16),
+           "_thread": SimpleNamespace(allocate_lock=threading.Lock)}
     public_tree = ast.parse(PUBLIC.read_text(encoding="utf-8"))
     nodes = [n for n in public_tree.body if isinstance(n, ast.Assign) and
              all(isinstance(t, ast.Name) for t in n.targets) and
@@ -54,6 +55,10 @@ def host_driver():
     nodes += [n for n in public_tree.body if isinstance(n, ast.FunctionDef) and
               n.name in ("CheckCode", "uart_handle", "AI_Uart_CMD", "AI_Uart_CMD_String")]
     exec(compile(ast.Module(body=nodes, type_ignores=[]), str(PUBLIC), "exec"), env)
+    for node in ast.parse(DRIVER.read_text(encoding="utf-8")).body:
+        if ((isinstance(node, ast.ClassDef) and node.name in ("_CameraUART", "_ModeUART"))
+                or (isinstance(node, ast.FunctionDef) and node.name == "_control_operation")):
+            exec(compile(ast.Module(body=[node], type_ignores=[]), str(DRIVER), "exec"), env)
     for path, name in ((AI, "FACE_DETECT"), (AI, "KPU_MODEL"), (DRIVER, "SmartCamera")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == name)
@@ -66,6 +71,8 @@ def host_driver():
     host._uart_rx = [bytearray()]
     host._uart_guard = threading.Lock()
     host._control_guard = threading.Lock()
+    host._uart_tx_guard = threading.Lock()
+    host._uart_generation = 0
     host._model_parameters = {}
     host._face_parameters = (1, 80)
     host.slc_parameter = [3, 15, 11, 1]
@@ -80,6 +87,7 @@ def pair(board, fail=False):
     host_uart, device_uart = Endpoint(), Endpoint()
     host_uart.peer, device_uart.peer = device_uart, host_uart
     host.uart, device.uart = host_uart, device_uart
+    host._uart_device = host_uart
     del device._uart_read_pending
     host_uart.on_write = device.uart_handle
     events = []

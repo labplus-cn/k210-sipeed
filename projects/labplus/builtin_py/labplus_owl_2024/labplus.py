@@ -372,6 +372,16 @@ class AICamera(object):
         except Exception as e:
             print("[UART error report]", e)
 
+    def _send_runtime_uart_error(self, mode, message):
+        text = str(message)
+        now = time.ticks_ms()
+        previous = getattr(self, "_last_runtime_uart_error", None)
+        if previous is not None and time.ticks_diff(now, previous[1]) < 1000:
+            return False
+        self._last_runtime_uart_error = ((mode, text), now)
+        self._send_uart_error(mode, 0, text)
+        return True
+
     def process_cmd(self,cmd):
         CMD = cmd
         if(len(CMD)>0):
@@ -637,9 +647,9 @@ class AICamera(object):
             try:
                 self.uart_handle()
             except Exception as e:
-                print(str(e))
-                print("==uart_handle==")
-                self._send_uart_error(getattr(self.k210, "mode", DEFAULT_MODE), 0, e)
+                if self._send_runtime_uart_error(getattr(self.k210, "mode", DEFAULT_MODE), e):
+                    print(str(e))
+                    print("==uart_handle==")
 
             try:
                 if(self.k210.mode==DEFAULT_MODE):
@@ -843,12 +853,12 @@ class AICamera(object):
                     self.AI_Uart_CMD_String(cmd=FACTORY_MODE,cmd_type=0x01,cmd_data=[self.btn_A_status,self.btn_B_status,self.tf_status],str_buf=str([self.tf_sn]))
             except Exception as e:
                 s=str(e)
-                print(s)
-                print("==222==")
-                self._send_uart_error(getattr(self.k210, "mode", DEFAULT_MODE), 0, e)
-                lcd.draw_string(0,180, s, lcd.WHITE, lcd.BLUE)
-                if(len(s)>30):
-                    lcd.draw_string(0,220, s[31:-1], lcd.WHITE, lcd.BLUE)
+                if self._send_runtime_uart_error(getattr(self.k210, "mode", DEFAULT_MODE), e):
+                    print(s)
+                    print("==222==")
+                    lcd.draw_string(0,180, s, lcd.WHITE, lcd.BLUE)
+                    if(len(s)>30):
+                        lcd.draw_string(0,220, s[31:-1], lcd.WHITE, lcd.BLUE)
 
     def reset(self):
         self.AI_Uart_CMD(0x01,0x01,0xFF)
